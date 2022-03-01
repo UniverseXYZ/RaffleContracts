@@ -1,0 +1,20 @@
+node_modules
+.envrc
+.env
+.DS_Store
+coverage
+coverage.json
+.openzeppelin
+
+deployments/ganache
+deployments/rinkeby
+deployments/ropsten
+deployments/mainnet
+
+#Hardhat files
+cache
+artifacts
+.vscode
+.solhint.json
+.prettierrc
+arguments.js
