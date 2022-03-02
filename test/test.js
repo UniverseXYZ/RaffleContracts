@@ -11,6 +11,15 @@ const subscriptionId = 677;
 describe("UniversalRaffle", async function () {
   const currentTime = Math.round((new Date()).getTime() / 1000);
 
+  let purchaseToken;
+  const startTime = currentTime + 100;
+  const endTime = currentTime + 500;
+  const maxTicketCount = 1000;
+  const minTicketCount = 100;
+  const tokenPrice = ethers.utils.parseEther("3.0");
+  const totalSlots = 10;
+  const paymentSplits = [];
+
   async function deployContracts() {
     const [owner, addr1] = await ethers.getSigners();
 
@@ -18,6 +27,7 @@ describe("UniversalRaffle", async function () {
     const MockToken = await ethers.getContractFactory('MockToken');
     const mockNFT = await MockNFT.deploy();
     const mockToken = await MockToken.deploy(ethers.utils.parseEther("10000"));
+    purchaseToken = mockToken.address;
 
     const RaffleTicketsFactory = await hre.ethers.getContractFactory("RaffleTickets");
     const RaffleTickets = await RaffleTicketsFactory.deploy();
@@ -45,6 +55,7 @@ describe("UniversalRaffle", async function () {
 
     const UniversalRaffle = await UniversalRaffleFactory.deploy(
       2000,
+      50,
       100,
       0,
       owner.address,
@@ -68,15 +79,6 @@ describe("UniversalRaffle", async function () {
 
     const { UniversalRaffle, RaffleTickets, mockNFT, mockToken } = await loadFixture(deployContracts);
 
-    const purchaseToken = mockToken.address;
-    const startTime = currentTime + 100;
-    const endTime = currentTime + 500;
-    const maxTicketCount = 1000;
-    const minTicketCount = 100;
-    const tokenPrice = ethers.utils.parseEther("3.0");
-    const totalSlots = 10;
-    const paymentSplits = [];
-
     auction = await UniversalRaffle.createRaffle([
       owner.address,
       purchaseToken,
@@ -92,18 +94,21 @@ describe("UniversalRaffle", async function () {
     return { UniversalRaffle, RaffleTickets, mockNFT, mockToken };
   }
 
+  async function depositRaffle() {
+    const [owner] = await ethers.getSigners();
+
+    const { UniversalRaffle, RaffleTickets, mockNFT, mockToken } = await loadFixture(launchRaffle);
+
+    await mockNFT.mint(owner.address, 'nftURI');
+    await mockNFT.approve(UniversalRaffle.address, 1);
+    await UniversalRaffle.depositERC721(1, 1, [[1, mockNFT.address]]);
+
+    return { UniversalRaffle, RaffleTickets, mockNFT, mockToken };
+  }
+
   it('should create raffle', async () => {
     const [owner] = await ethers.getSigners();
-    const { UniversalRaffle, mockNFT, mockToken } = await loadFixture(launchRaffle);
-
-    const purchaseToken = mockToken.address;
-    const startTime = currentTime + 100;
-    const endTime = currentTime + 500;
-    const maxTicketCount = 1000;
-    const minTicketCount = 100;
-    const tokenPrice = ethers.utils.parseEther("3.0");
-    const totalSlots = 10;
-    const paymentSplits = [];
+    const { UniversalRaffle } = await loadFixture(launchRaffle);
 
     const raffleInfo = await UniversalRaffle.getRaffleInfo(1);
     console.log(raffleInfo);
@@ -120,22 +125,14 @@ describe("UniversalRaffle", async function () {
 
   it('should purchase one raffle ticket', async () => {
     const [owner] = await ethers.getSigners();
-    const { UniversalRaffle, RaffleTickets, mockNFT, mockToken } = await loadFixture(launchRaffle);
+    const { UniversalRaffle, RaffleTickets, mockNFT, mockToken } = await loadFixture(depositRaffle);
 
     const startTime = currentTime + 100;
-    const tokenPrice = ethers.utils.parseEther("3.0");
-    const buyAmount = 20;
-
-    await mockNFT.mint(owner.address, 'nftURI');
-    await mockNFT.approve(UniversalRaffle.address, 1);
-
-    await mockToken.approve(UniversalRaffle.address, tokenPrice.mul(buyAmount));
-
-    await UniversalRaffle.depositERC721(1, 1, [[1, mockNFT.address]]);
-
     await ethers.provider.send('evm_setNextBlockTimestamp', [startTime]);
     await ethers.provider.send('evm_mine');
 
+    const buyAmount = 20;
+    await mockToken.approve(UniversalRaffle.address, tokenPrice.mul(buyAmount));
     await UniversalRaffle.buyRaffleTicket(1, buyAmount);
 
     const raffleId = 1;

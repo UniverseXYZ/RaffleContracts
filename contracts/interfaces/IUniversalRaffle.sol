@@ -14,12 +14,20 @@ import "../UniversalRaffleCore.sol";
 interface IUniversalRaffle {
   /// @notice Create a raffle with initial parameters
   /// @param config Raffle configuration
+  /// @dev config.raffler Raffler creator (msg.sender)
+  /// @dev config.ERC20PurchaseToken ERC20 token used to purchase raffle tickets
   /// @dev config.startTime The start of the raffle
   /// @dev config.endTime End of the raffle
-  /// @dev config.numberOfSlots The number of winner slots which the raffle will have
-  /// @dev config.ERC20PurchaseToken Address of the token used for purchasing tickets - can be address(0)
+  /// @dev config.maxTicketCount Maximum tickets allowed to be sold
+  /// @dev config.minTicketCount Minimum tickets that must be sold for raffle to proceed
+  /// @dev config.ticketPrice Price per raffle ticket
+  /// @dev config.totalSlots The number of winner slots which the raffle will have
   /// @dev config.paymentSplits Array of payment splits which will be distributed after raffle ends
   function createRaffle(UniversalRaffleCore.RaffleConfig calldata config) external returns (uint256);
+
+  /// @notice Change raffle configuration
+  /// @param config Raffle configuration above
+  function reconfigureRaffle(UniversalRaffleCore.RaffleConfig calldata config, uint256 existingRaffleId) external returns (uint256);
 
   /// @notice Deposit ERC721 assets to the specified Raffle
   /// @param raffleId The raffle id
@@ -84,13 +92,17 @@ interface IUniversalRaffle {
   /// @param raffleId The raffle id
   function cancelRaffle(uint256 raffleId) external;
 
-  /// @notice Sets the percentage of the royalty which wil be kept from each sale
-  /// @param royaltyFeeBps The royalty percentage in Basis points (1000 - 10%)
-  function setRoyaltyFeeBps(uint256 royaltyFeeBps) external returns(uint256);
+  /// @notice Sets maximum number of tickets someone can buy in one bulk purchase
+  /// @param maxBulkPurchaseCount The bulk count
+  function setMaxBulkPurchaseCount(uint256 maxBulkPurchaseCount) external returns(uint256);
 
   /// @notice Sets the NFT slot limit for raffle
   /// @param nftSlotLimit The royalty percentage
   function setNftSlotLimit(uint256 nftSlotLimit) external returns(uint256);
+
+  /// @notice Sets the percentage of the royalty which wil be kept from each sale
+  /// @param royaltyFeeBps The royalty percentage in Basis points (1000 - 10%)
+  function setRoyaltyFeeBps(uint256 royaltyFeeBps) external returns(uint256);
 
   /// @notice Sets the RoyaltiesRegistry
   /// @param royaltiesRegistry The royalties registry address

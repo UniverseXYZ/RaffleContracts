@@ -90,6 +90,7 @@ library UniversalRaffleCore {
         address payable daoAddress;
         bool daoInitialized;
         uint256 maxNumberOfSlotsPerRaffle;
+        uint256 maxBulkPurchaseCount;
         uint256 royaltyFeeBps;
         uint256 nftSlotLimit;
 
@@ -220,13 +221,9 @@ library UniversalRaffleCore {
         ds.daoInitialized = true;
     }
 
-    function createRaffle(RaffleConfig calldata config) external returns (uint256) {
+    function configureRaffle(RaffleConfig calldata config, uint256 existingRaffleId) external returns (uint256) {
         Storage storage ds = raffleStorage();
         uint256 currentTime = block.timestamp;
-
-        console.log(currentTime);
-        console.log(config.startTime);
-        console.log(config.endTime);
 
         require(
             currentTime < config.startTime &&
@@ -242,24 +239,36 @@ library UniversalRaffleCore {
         require(ds.supportedERC20Tokens[config.ERC20PurchaseToken], "The ERC20 token is not supported");
         require(config.minTicketCount > 1 && config.maxTicketCount >= config.minTicketCount, "Ticket count err");
 
-        uint256 raffleId = ds.totalRaffles + 1;
-        ds.raffleConfigs[raffleId].raffler = msg.sender;
+        uint256 raffleId;
+        if (existingRaffleId > 0) {
+            require(ds.raffleConfigs[existingRaffleId].raffler == msg.sender, "No permission");
+            require(ds.raffleConfigs[raffleId].startTime > block.timestamp, "Raffle already started");
+            raffleId = existingRaffleId;
+        } else {
+            ds.totalRaffles = ds.totalRaffles + 1;
+            raffleId = ds.totalRaffles;
+
+            // Can only be initialized and not reconfigurable
+            ds.raffles[raffleId].ticketCounter = 0;
+            ds.raffles[raffleId].depositedNFTCounter = 0;
+            ds.raffles[raffleId].withdrawnNFTCounter = 0;
+            ds.raffles[raffleId].useAllowList = false;
+            ds.raffles[raffleId].isCanceled = false;
+            ds.raffles[raffleId].isFinalized = false;
+
+            ds.raffleConfigs[raffleId].raffler = msg.sender;
+            ds.raffleConfigs[raffleId].totalSlots = config.totalSlots;
+        }
+
         ds.raffleConfigs[raffleId].ERC20PurchaseToken = config.ERC20PurchaseToken;
         ds.raffleConfigs[raffleId].startTime = config.startTime;
         ds.raffleConfigs[raffleId].endTime = config.endTime;
         ds.raffleConfigs[raffleId].maxTicketCount = config.maxTicketCount;
         ds.raffleConfigs[raffleId].minTicketCount = config.minTicketCount;
         ds.raffleConfigs[raffleId].ticketPrice = config.ticketPrice;
-        ds.raffleConfigs[raffleId].totalSlots = config.totalSlots;
-
-        ds.raffles[raffleId].ticketCounter = 0;
-        ds.raffles[raffleId].depositedNFTCounter = 0;
-        ds.raffles[raffleId].withdrawnNFTCounter = 0;
-        ds.raffles[raffleId].useAllowList = false;
-        ds.raffles[raffleId].isCanceled = false;
-        ds.raffles[raffleId].isFinalized = false;
 
         uint256 checkSum = 0;
+        delete ds.raffleConfigs[raffleId].paymentSplits;
         for (uint256 k = 0; k < config.paymentSplits.length; k += 1) {
             require(config.paymentSplits[k].recipient != address(0), "Recipient should be present");
             require(config.paymentSplits[k].value != 0, "Fee value should be positive");
@@ -267,8 +276,6 @@ library UniversalRaffleCore {
             ds.raffleConfigs[raffleId].paymentSplits.push(config.paymentSplits[k]);
         }
         require(checkSum < 10000, "E15");
-
-        ds.totalRaffles = raffleId;
 
         return raffleId;
     }
@@ -543,6 +550,12 @@ library UniversalRaffleCore {
         Storage storage ds = raffleStorage();
         ds.royaltyFeeBps = _royaltyFeeBps;
         return ds.royaltyFeeBps;
+    }
+
+    function setMaxBulkPurchaseCount(uint256 _maxBulkPurchaseCount) external onlyDAO returns (uint256) {
+        Storage storage ds = raffleStorage();
+        ds.maxBulkPurchaseCount = _maxBulkPurchaseCount;
+        return ds.maxBulkPurchaseCount;
     }
 
     function setNftSlotLimit(uint256 _nftSlotLimit) external onlyDAO returns (uint256) {

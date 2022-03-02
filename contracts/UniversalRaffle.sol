@@ -29,6 +29,7 @@ contract UniversalRaffle is
 
     constructor(
         uint256 _maxNumberOfSlotsPerRaffle,
+        uint256 _maxBulkPurchaseCount,
         uint256 _nftSlotLimit,
         uint256 _royaltyFeeBps,
         address payable _daoAddress,
@@ -40,6 +41,7 @@ contract UniversalRaffle is
         UniversalRaffleCore.Storage storage ds = UniversalRaffleCore.raffleStorage();
 
         ds.maxNumberOfSlotsPerRaffle = _maxNumberOfSlotsPerRaffle;
+        ds.maxBulkPurchaseCount = _maxBulkPurchaseCount;
         ds.nftSlotLimit = _nftSlotLimit;
         ds.royaltyFeeBps = _royaltyFeeBps;
         ds.royaltiesRegistry = _royaltiesRegistry;
@@ -66,7 +68,11 @@ contract UniversalRaffle is
     }
 
     function createRaffle(UniversalRaffleCore.RaffleConfig calldata config) external override returns (uint256) {
-        return UniversalRaffleCore.createRaffle(config);
+        return UniversalRaffleCore.configureRaffle(config, 0);
+    }
+
+    function reconfigureRaffle(UniversalRaffleCore.RaffleConfig calldata config, uint256 existingRaffleId) external override returns (uint256) {
+        return UniversalRaffleCore.configureRaffle(config, existingRaffleId);
     }
 
     function batchDepositToRaffle(
@@ -121,7 +127,7 @@ contract UniversalRaffle is
         require(!ds.raffles[raffleId].isCanceled, "E04");
         require(ds.raffleConfigs[raffleId].startTime < block.timestamp, "E02");
         require(block.timestamp < raffleInfo.endTime, "E18");
-        require(raffle.depositedNFTCounter > 0 && amount > 0, "E19");
+        require(raffle.depositedNFTCounter > 0 && amount > 0 && amount <= ds.maxNumberOfSlotsPerRaffle, "E19");
 
         if (ds.raffleConfigs[raffleId].ERC20PurchaseToken == address(1)) {
             uint256 excessAmount = msg.value.sub(amount.mul(raffleInfo.ticketPrice));
@@ -203,12 +209,16 @@ contract UniversalRaffle is
         return UniversalRaffleCore.cancelRaffle(raffleId);
     }
 
-    function setRoyaltyFeeBps(uint256 _royaltyFeeBps) external override onlyDAO returns (uint256) {
-        return UniversalRaffleCore.setRoyaltyFeeBps(_royaltyFeeBps);
+    function setMaxBulkPurchaseCount(uint256 _maxBulkPurchaseCount) external override onlyDAO returns (uint256) {
+        return UniversalRaffleCore.setMaxBulkPurchaseCount(_maxBulkPurchaseCount);
     }
 
     function setNftSlotLimit(uint256 _nftSlotLimit) external override onlyDAO returns (uint256) {
         return UniversalRaffleCore.setNftSlotLimit(_nftSlotLimit);
+    }
+
+    function setRoyaltyFeeBps(uint256 _royaltyFeeBps) external override onlyDAO returns (uint256) {
+        return UniversalRaffleCore.setRoyaltyFeeBps(_royaltyFeeBps);
     }
 
     function setRoyaltiesRegistry(IRoyaltiesProvider _royaltiesRegistry) external override onlyDAO returns (IRoyaltiesProvider) {
