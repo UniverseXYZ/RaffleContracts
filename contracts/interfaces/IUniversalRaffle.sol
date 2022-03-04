@@ -29,6 +29,15 @@ interface IUniversalRaffle {
   /// @param config Raffle configuration above
   function reconfigureRaffle(UniversalRaffleCore.RaffleConfig calldata config, uint256 existingRaffleId) external returns (uint256);
 
+  /// @notice Sets allow list addresses and allowances
+  /// @param raffleId The raffle id
+  /// @param allowList Array of [address, allowance]
+  function setAllowList(uint256 raffleId, UniversalRaffleCore.AllowList[] calldata allowList) external;
+
+  /// @notice Turns allow list on and off
+  /// @param raffleId The raffle id
+  function toggleAllowList(uint256 raffleId) external;
+
   /// @notice Deposit ERC721 assets to the specified Raffle
   /// @param raffleId The raffle id
   /// @param slotIndices Array of slot indexes
@@ -62,7 +71,7 @@ interface IUniversalRaffle {
   /// @notice Purchases raffle tickets
   /// @param raffleId The raffle id
   /// @param amount The amount of raffle tickets
-  function buyRaffleTicket(uint256 raffleId, uint256 amount) external payable;
+  function buyRaffleTickets(uint256 raffleId, uint256 amount) external payable;
 
   /// @notice Select winners of raffle
   /// @param raffleId The raffle id
@@ -92,6 +101,21 @@ interface IUniversalRaffle {
   /// @param raffleId The raffle id
   function cancelRaffle(uint256 raffleId) external;
 
+  // /// @notice Gets the minimum reserve price for auciton slot
+  // /// @param raffleId The raffle id
+  // /// @param slotIndex The slot index
+  // /// @param nftSlotIndex The nft slot index
+  // function distributeSecondarySaleFees(
+  //     uint256 raffleId,
+  //     uint256 slotIndex,
+  //     uint256 nftSlotIndex
+  // ) external;
+
+  // /// @notice Withdraws the aggregated royalites amount of specific token to a specified address
+  // /// @param token The address of the token to withdraw
+  // function distributeRoyalties(address token) external returns(uint256);
+
+
   /// @notice Sets maximum number of tickets someone can buy in one bulk purchase
   /// @param maxBulkPurchaseCount The bulk count
   function setMaxBulkPurchaseCount(uint256 maxBulkPurchaseCount) external returns(uint256);
@@ -115,10 +139,25 @@ interface IUniversalRaffle {
 
   /// @notice Gets raffle information
   /// @param raffleId The raffle id
-  function getRaffleInfo(uint256 raffleId)
+  function getRaffleConfig(uint256 raffleId)
       external
       view
-      returns (UniversalRaffleCore.RaffleConfig memory, uint256);
+      returns (UniversalRaffleCore.RaffleConfig memory);
+
+  /// @notice Gets raffle state
+  /// @param raffleId The raffle id
+  function getRaffleState(uint256 raffleId)
+      external
+      view
+      returns (UniversalRaffleCore.RaffleState memory);
+
+  /// @notice Gets allow list
+  /// @param raffleId The raffle id
+  function getAllowList(uint256 raffleId, address participant)
+      external
+      view
+      returns (uint256);
+
 
   /// @notice Gets deposited erc721s for slot
   /// @param raffleId The raffle id
@@ -138,4 +177,6 @@ interface IUniversalRaffle {
   /// @param slotIndex The slot index
   function getSlotInfo(uint256 raffleId, uint256 slotIndex) external view returns (UniversalRaffleCore.SlotInfo memory);
 
+  /// @notice Gets contract configuration controlled by DAO
+  function getContractConfig() external view returns (UniversalRaffleCore.ContractConfigByDAO memory);
 }

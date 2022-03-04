@@ -8,10 +8,11 @@ const link = '0x01BE23585060835E02B77ef475b0Cc51aA1e0709';
 const keyHash = '0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc';
 const subscriptionId = 677;
 
-describe("UniversalRaffle", async function () {
+describe("Raffle Setup Security", async function () {
   const currentTime = Math.round((new Date()).getTime() / 1000);
 
   let purchaseToken;
+  const zeroAddress = '0x0000000000000000000000000000000000000000';
   const startTime = currentTime + 100;
   const endTime = currentTime + 500;
   const maxTicketCount = 1000;
@@ -19,6 +20,12 @@ describe("UniversalRaffle", async function () {
   const tokenPrice = ethers.utils.parseEther("3.0");
   const totalSlots = 10;
   const paymentSplits = [];
+
+  const TEST_VRF = true;
+  const MAX_NUMBER_SLOTS = 2000;
+  const MAX_BULK_PURCHASE = 50;
+  const NFT_SLOT_LIMIT = 100
+  const ROYALTY_FEE_BPS = 0;
 
   async function deployContracts() {
     const [owner, addr1] = await ethers.getSigners();
@@ -54,10 +61,11 @@ describe("UniversalRaffle", async function () {
     });
 
     const UniversalRaffle = await UniversalRaffleFactory.deploy(
-      2000,
-      50,
-      100,
-      0,
+      TEST_VRF,
+      MAX_NUMBER_SLOTS,
+      MAX_BULK_PURCHASE,
+      NFT_SLOT_LIMIT,
+      ROYALTY_FEE_BPS,
       owner.address,
       RaffleTickets.address,
       VRFInstance.address,
@@ -65,21 +73,22 @@ describe("UniversalRaffle", async function () {
       mockRoyaltiesRegistry.address
     );
 
-
     await UniversalRaffle.deployed();
 
-    RaffleTickets.initRaffleTickets(UniversalRaffle.address);
-    VRFInstance.initVRF(UniversalRaffle.address);
+    await expect(RaffleTickets.connect(addr1).initRaffleTickets(UniversalRaffle.address)).to.be.reverted;
+    await expect(VRFInstance.connect(addr1).initVRF(UniversalRaffle.address)).to.be.reverted;
+    await RaffleTickets.initRaffleTickets(UniversalRaffle.address);
+    await VRFInstance.initVRF(UniversalRaffle.address);
 
-    return { UniversalRaffle, RaffleTickets, mockNFT, mockToken };
+    return { UniversalRaffle, RaffleTickets, VRFInstance, mockNFT, mockToken };
   };
 
-  async function launchRaffle() {
+  async function launchRaffles() {
     const [owner] = await ethers.getSigners();
 
-    const { UniversalRaffle, RaffleTickets, mockNFT, mockToken } = await loadFixture(deployContracts);
+    const { UniversalRaffle, RaffleTickets, VRFInstance, mockNFT, mockToken } = await loadFixture(deployContracts);
 
-    auction = await UniversalRaffle.createRaffle([
+    await UniversalRaffle.createRaffle([
       owner.address,
       purchaseToken,
       startTime,
@@ -91,53 +100,55 @@ describe("UniversalRaffle", async function () {
       paymentSplits,
     ]);
 
-    return { UniversalRaffle, RaffleTickets, mockNFT, mockToken };
+    await UniversalRaffle.createRaffle([
+      owner.address,
+      zeroAddress,
+      startTime,
+      endTime,
+      maxTicketCount,
+      minTicketCount,
+      tokenPrice,
+      totalSlots,
+      paymentSplits,
+    ]);
+
+    return { UniversalRaffle, RaffleTickets, VRFInstance, mockNFT, mockToken };
   }
 
-  async function depositRaffle() {
+  async function raffleWithNFTs() {
     const [owner] = await ethers.getSigners();
 
-    const { UniversalRaffle, RaffleTickets, mockNFT, mockToken } = await loadFixture(launchRaffle);
+    const { UniversalRaffle, RaffleTickets, VRFInstance, mockNFT, mockToken } = await loadFixture(launchRaffles);
 
     await mockNFT.mint(owner.address, 'nftURI');
-    await mockNFT.approve(UniversalRaffle.address, 1);
+    await mockNFT.setApprovalForAll(UniversalRaffle.address, true);
     await UniversalRaffle.depositERC721(1, 1, [[1, mockNFT.address]]);
 
-    return { UniversalRaffle, RaffleTickets, mockNFT, mockToken };
+    await mockNFT.mint(owner.address, 'nftURI');
+    await mockNFT.mint(owner.address, 'nftURI');
+    await UniversalRaffle.batchDepositToRaffle(2, [1, 2], [[[2, mockNFT.address]], [[3, mockNFT.address]]]);
+
+    return { UniversalRaffle, RaffleTickets, VRFInstance, mockNFT, mockToken };
   }
 
-  it('should create raffle', async () => {
+  it('should not allow directly minting Raffle Ticket NFTs', async () => {
     const [owner] = await ethers.getSigners();
-    const { UniversalRaffle } = await loadFixture(launchRaffle);
+    const { RaffleTickets } = await loadFixture(launchRaffles);
 
-    const raffleInfo = await UniversalRaffle.getRaffleInfo(1);
-    console.log(raffleInfo);
-    expect(raffleInfo[0][0]).to.equal(owner.address);
-    expect(raffleInfo[0][1]).to.equal(purchaseToken);
-    expect(raffleInfo[0][2].toNumber()).to.equal(startTime);
-    expect(raffleInfo[0][3].toNumber()).to.equal(endTime);
-    expect(raffleInfo[0][4].toNumber()).to.equal(maxTicketCount);
-    expect(raffleInfo[0][5].toNumber()).to.equal(minTicketCount);
-    expect(raffleInfo[0][6].toString()).to.equal(tokenPrice.toString());
-    expect(raffleInfo[0][7]).to.equal(totalSlots);
-    expect(JSON.stringify(raffleInfo[0][8])).to.equal(JSON.stringify(paymentSplits));
-  })
+    await expect(RaffleTickets.mint(owner.address, 1, 1)).to.be.reverted;
+  });
 
-  it('should purchase one raffle ticket', async () => {
+  it('should not allow directly calling VRF function', async () => {
     const [owner] = await ethers.getSigners();
-    const { UniversalRaffle, RaffleTickets, mockNFT, mockToken } = await loadFixture(depositRaffle);
+    const { VRFInstance } = await loadFixture(launchRaffles);
 
-    const startTime = currentTime + 100;
-    await ethers.provider.send('evm_setNextBlockTimestamp', [startTime]);
-    await ethers.provider.send('evm_mine');
+    await expect(VRFInstance.getWinners(1)).to.be.reverted;
+  });
 
-    const buyAmount = 20;
-    await mockToken.approve(UniversalRaffle.address, tokenPrice.mul(buyAmount));
-    await UniversalRaffle.buyRaffleTicket(1, buyAmount);
-
+  it('should check raffle config after DAO updates', async () => {
+    const { UniversalRaffle, } = await loadFixture(raffleWithNFTs);
     const raffleId = 1;
-    const tokenId = raffleId * 10000000 + 1;
-    expect(await RaffleTickets.ownerOf(tokenId)).to.equal(owner.address);
-    expect(await RaffleTickets.balanceOf(owner.address)).to.equal(20);
+
+    const config = await UniversalRaffle.getRaffleState(raffleId);
   })
 });

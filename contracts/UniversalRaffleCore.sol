@@ -37,16 +37,22 @@ library UniversalRaffleCore {
     }
 
     struct Raffle {
-        uint256 vrfNumber;
         uint256 ticketCounter;
         uint256 depositedNFTCounter;
         uint256 withdrawnNFTCounter;
         mapping(uint256 => Slot) slots;
-        mapping(address => uint256) allowList;
-        mapping(address => uint256) entriesPerAddress;
-        mapping(uint256 => address) entries;
         mapping(uint256 => address) winners;
         mapping(uint256 => bool) refunds;
+        mapping(address => uint256) allowList;
+        bool useAllowList;
+        bool isCanceled;
+        bool isFinalized;
+    }
+
+    struct RaffleState {
+        uint256 ticketCounter;
+        uint256 depositedNFTCounter;
+        uint256 withdrawnNFTCounter;
         bool useAllowList;
         bool isCanceled;
         bool isFinalized;
@@ -83,12 +89,30 @@ library UniversalRaffleCore {
         uint256 value;
     }
 
+    struct AllowList {
+        address participant;
+        uint32 allocation;
+    }
+
+    struct ContractConfigByDAO {
+        address daoAddress;
+        address raffleTicketAddress;
+        address vrfAddress;
+        uint256 maxNumberOfSlotsPerRaffle;
+        uint256 maxBulkPurchaseCount;
+        uint256 nftSlotLimit;
+        uint256 royaltyFeeBps;
+        bool daoInitialized;
+        bool unsafeRandomNumber;
+    }
+
     struct Storage { 
         address vrfAddress;
         address raffleTicketAddress;
 
         address payable daoAddress;
         bool daoInitialized;
+        bool unsafeRandomNumber;
         uint256 maxNumberOfSlotsPerRaffle;
         uint256 maxBulkPurchaseCount;
         uint256 royaltyFeeBps;
@@ -236,7 +260,7 @@ library UniversalRaffleCore {
             "Slots are out of bounds"
         );
 
-        require(ds.supportedERC20Tokens[config.ERC20PurchaseToken], "The ERC20 token is not supported");
+        require(config.ERC20PurchaseToken == address(0) || ds.supportedERC20Tokens[config.ERC20PurchaseToken], "The ERC20 token is not supported");
         require(config.minTicketCount > 1 && config.maxTicketCount >= config.minTicketCount, "Ticket count err");
 
         uint256 raffleId;
@@ -280,6 +304,32 @@ library UniversalRaffleCore {
         return raffleId;
     }
 
+    function setAllowList(uint256 raffleId, AllowList[] calldata allowList) public 
+        onlyExistingRaffle(raffleId)
+        onlyRaffleNotStarted(raffleId)
+        onlyRaffleNotCanceled(raffleId)
+        onlyRaffleOwner(raffleId)
+    {
+        Storage storage ds = raffleStorage();
+        Raffle storage raffle = ds.raffles[raffleId];
+
+        require(allowList.length <= 1000, 'Max 1000 per');
+        for (uint32 i = 0; i < allowList.length; i++) {
+            raffle.allowList[allowList[i].participant] = allowList[i].allocation;
+        }
+    }
+
+    function toggleAllowList(uint256 raffleId) public
+        onlyExistingRaffle(raffleId)
+        onlyRaffleNotStarted(raffleId)
+        onlyRaffleNotCanceled(raffleId)
+        onlyRaffleOwner(raffleId)
+    {
+        Storage storage ds = raffleStorage();
+        Raffle storage raffle = ds.raffles[raffleId];
+        raffle.useAllowList = !raffle.useAllowList;
+    }
+
     function depositERC721Checks(
         uint256 raffleId,
         uint256 slotIndex,
@@ -290,7 +340,7 @@ library UniversalRaffleCore {
         RaffleConfig storage raffleConfig = ds.raffleConfigs[raffleId];
 
         require(msg.sender == raffleConfig.raffler, "E36");
-        require(raffleConfig.totalSlots >= slotIndex && slotIndex > 0, "E29");
+        require(raffleConfig.totalSlots >= slotIndex && slotIndex >= 0, "E29");
         require((tokens.length <= 40), "E37");
         require(
             (raffle.slots[slotIndex].depositedNFTCounter + tokens.length <=
@@ -473,7 +523,6 @@ library UniversalRaffleCore {
 
     function cancelRaffle(uint256 raffleId)
         external
-        
         onlyExistingRaffle(raffleId)
         onlyRaffleNotStarted(raffleId)
         onlyRaffleNotCanceled(raffleId)
@@ -485,66 +534,17 @@ library UniversalRaffleCore {
         emit LogRaffleCanceled(raffleId);
     }
 
-    // function distributeSecondarySaleFees(
-    //     uint256 raffleId,
-    //     uint256 slotIndex,
-    //     uint256 nftSlotIndex
-    // ) external override {
-    //     Storage storage ds = raffleStorage();
+    function refundRaffle(uint256 raffleId)
+        external
+        onlyExistingRaffle(raffleId)
+        onlyRaffleStarted(raffleId)
+        onlyRaffleNotCanceled(raffleId)
+    {
+        Storage storage ds = raffleStorage();
+        ds.raffles[raffleId].isCanceled = true;
 
-    //     Raffle storage raffle = ds.raffles[raffleId];
-    //     Slot storage slot = raffle.slots[slotIndex];
-    //     DepositedNFT storage nft = slot.depositedNFTs[nftSlotIndex];
-
-    //     require(nft.hasSecondarySaleFees && !nft.feesPaid, "E34");
-    //     require(slot.revenueCaptured, "E35");
-
-    //     uint256 averageERC721SalePrice = slot.winningBidAmount / slot.totalDepositedNfts;
-
-    //     LibPart.Part[] memory fees = ds.royaltiesRegistry.getRoyalties(nft.tokenAddress, nft.tokenId);
-    //     uint256 value = averageERC721SalePrice;
-    //     nft.feesPaid = true;
-
-    //     for (uint256 i = 0; i < fees.length && i < 5; i += 1) {
-    //         FeeCalculate.Fee memory interimFee = value.subFee(
-    //             (averageERC721SalePrice * (fees[i].value)) / (10000)
-    //         );
-    //         value = interimFee.remainingValue;
-
-    //         if (raffle.ERC20PurchaseToken == address(0) && interimFee.feeValue > 0) {
-    //             (bool success, ) = (fees[i].account).call{value: interimFee.feeValue}("");
-    //             require(success, "TX FAILED");
-    //         }
-
-    //         if (raffle.ERC20PurchaseToken != address(0) && interimFee.feeValue > 0) {
-    //             IERC20 token = IERC20(raffle.ERC20PurchaseToken);
-    //             require(token.transfer(address(fees[i].account), interimFee.feeValue), "TX FAILED");
-    //         }
-    //     }
-    // }
-
-    // function distributeRoyalties(address token) external onlyDAO returns (uint256) {
-    //     Storage storage ds = raffleStorage();
-
-    //     uint256 amountToWithdraw = ds.royaltiesReserve[token];
-    //     require(amountToWithdraw > 0, "E30");
-
-    //     ds.royaltiesReserve[token] = 0;
-
-    //     emit LogRoyaltiesWithdrawal(amountToWithdraw, ds.daoAddress, token);
-
-    //     if (token == address(0)) {
-    //         (bool success, ) = payable(ds.daoAddress).call{value: amountToWithdraw}("");
-    //         require(success, "TX FAILED");
-    //     }
-
-    //     if (token != address(0)) {
-    //         IERC20 erc20token = IERC20(token);
-    //         require(erc20token.transfer(ds.daoAddress, amountToWithdraw), "TX TX FAILED");
-    //     }
-
-    //     return amountToWithdraw;
-    // }
+        emit LogRaffleCanceled(raffleId);
+    }
 
     function setRoyaltyFeeBps(uint256 _royaltyFeeBps) external onlyDAO returns (uint256) {
         Storage storage ds = raffleStorage();
@@ -576,9 +576,27 @@ library UniversalRaffleCore {
         return (erc20token, value);
     }
 
-    function getRaffleInfo(uint256 raffleId) external view returns (RaffleConfig memory, uint256) {
+    function getRaffleConfig(uint256 raffleId) external view returns (RaffleConfig memory) {
         Storage storage ds = raffleStorage();
-        return (ds.raffleConfigs[raffleId], ds.raffles[raffleId].ticketCounter);
+        return ds.raffleConfigs[raffleId];
+    }
+
+    function getRaffleState(uint256 raffleId) external view returns (RaffleState memory)
+    {
+        Storage storage ds = raffleStorage();
+        return RaffleState(
+            ds.raffles[raffleId].ticketCounter,
+            ds.raffles[raffleId].depositedNFTCounter,
+            ds.raffles[raffleId].withdrawnNFTCounter,
+            ds.raffles[raffleId].useAllowList,
+            ds.raffles[raffleId].isCanceled,
+            ds.raffles[raffleId].isFinalized
+        );
+    }
+
+    function getAllowList(uint256 raffleId, address participant) external view returns (uint256) {
+        Storage storage ds = raffleStorage();
+        return ds.raffles[raffleId].allowList[participant];
     }
 
     function getDepositedNftsInSlot(uint256 raffleId, uint256 slotIndex) external view returns (DepositedNFT[] memory) {
@@ -607,5 +625,21 @@ library UniversalRaffleCore {
     function getSlotWinner(uint256 raffleId, uint256 slotIndex) external view returns (address) {
         Storage storage ds = raffleStorage();
         return ds.raffles[raffleId].winners[slotIndex];
+    }
+
+    function getContractConfig() external view returns (ContractConfigByDAO memory) {
+        Storage storage ds = raffleStorage();
+
+        return ContractConfigByDAO(
+            ds.daoAddress,
+            ds.raffleTicketAddress,
+            ds.vrfAddress,
+            ds.maxNumberOfSlotsPerRaffle,
+            ds.maxBulkPurchaseCount,
+            ds.nftSlotLimit,
+            ds.royaltyFeeBps,
+            ds.daoInitialized,
+            ds.unsafeRandomNumber
+        );
     }
 }

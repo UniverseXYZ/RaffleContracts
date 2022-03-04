@@ -14,6 +14,7 @@ import "./UniversalRaffleCore.sol";
 import "./RaffleTickets.sol";
 
 contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
+    address private creationAddress;
     address public universalRaffleAddress;
     RaffleTickets public raffleTickets;
     bool public initialized = false;
@@ -33,6 +34,7 @@ contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
       uint64 _subscriptionId,
       address _raffleTicketAddress
     ) VRFConsumerBaseV2(_vrfCoordinator) {
+        creationAddress = msg.sender;
         COORDINATOR = VRFCoordinatorV2Interface(_vrfCoordinator);
         LINKTOKEN = LinkTokenInterface(_linkToken);
         keyHash = _keyHash;
@@ -41,21 +43,24 @@ contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
         raffleTickets = RaffleTickets(_raffleTicketAddress);
     }
 
+    modifier onlyDeployer() {
+      require(msg.sender == creationAddress, "Not allowed");
+      _;
+    }
+
     modifier onlyRaffleContract() {
       require(msg.sender == universalRaffleAddress, "Not allowed");
       _;
     }
 
-    function initVRF(address _contractAddress) public override {
+    function initVRF(address _contractAddress) public override onlyDeployer() {
       require(!initialized, "Already initialized");
       universalRaffleAddress = _contractAddress;
     }
 
     function getWinners(uint256 raffleId) public override onlyRaffleContract() {
-      (
-        UniversalRaffleCore.RaffleConfig memory raffle,
-        uint256 ticketCounter
-      ) = IUniversalRaffle(universalRaffleAddress).getRaffleInfo(raffleId);
+      UniversalRaffleCore.RaffleConfig memory raffle = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId);
+      UniversalRaffleCore.RaffleState memory raffleState = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
 
       uint256 requestId = COORDINATOR.requestRandomWords(
           keyHash,
@@ -73,16 +78,37 @@ contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
      */
     function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
         uint256 raffleId = vrfToRaffleId[requestId];
-        (
-          UniversalRaffleCore.RaffleConfig memory raffle,
-          uint256 ticketCounter
-        ) = IUniversalRaffle(universalRaffleAddress).getRaffleInfo(raffleId);
+
+        UniversalRaffleCore.RaffleConfig memory raffle = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId);
+        UniversalRaffleCore.RaffleState memory raffleState = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
 
         address[] memory winners = new address[](raffle.totalSlots);
         for (uint32 i = 0; i < raffle.totalSlots; i++) {
             winners[i] = raffleTickets.ownerOf(
               (raffleId * 10000000) +
-              randomWords[i] % ticketCounter
+              (randomWords[i] % raffleState.ticketCounter) + 1
+            );
+        }
+
+        IUniversalRaffle(universalRaffleAddress).setWinners(raffleId, winners);
+    }
+
+    // Used for testing purposes only
+    function getWinnersMock(uint256 raffleId) public override onlyRaffleContract() {
+        UniversalRaffleCore.RaffleConfig memory raffle = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId);
+        UniversalRaffleCore.RaffleState memory raffleState = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
+
+        uint256[] memory words = new uint256[](raffle.totalSlots);
+        for (uint256 i = 0; i < raffle.totalSlots; i++) {
+            uint256 randomNumber = uint256(keccak256(abi.encodePacked(block.difficulty, block.timestamp, raffleId + i)));
+            words[i] = randomNumber;
+        }
+
+        address[] memory winners = new address[](raffle.totalSlots);
+        for (uint32 i = 0; i < raffle.totalSlots; i++) {
+            winners[i] = raffleTickets.ownerOf(
+              (raffleId * 10000000) +
+              (words[i] % raffleState.ticketCounter) + 1
             );
         }
 

@@ -11,20 +11,28 @@ import "./interfaces/IRaffleTickets.sol";
 import 'base64-sol/base64.sol';
 
 contract RaffleTickets is IRaffleTickets, ERC721 {
+  address private creationAddress;
   address public universalRaffleAddress;
   bool public initialized = false;
   uint256 mintedTickets = 0;
 
   mapping(uint256 => uint32) ticketCounter;
 
-  constructor() ERC721("Raffle Tickets", "RAFFLE") {}
+  constructor() ERC721("Raffle Tickets", "RAFFLE") {
+    creationAddress = msg.sender;
+  }
+
+  modifier onlyDeployer() {
+    require(msg.sender == creationAddress, "Not allowed");
+    _;
+  }
 
   modifier onlyRaffleContract() {
     require(msg.sender == universalRaffleAddress, "Not allowed");
     _;
   }
 
-  function initRaffleTickets(address _contractAddress) public {
+  function initRaffleTickets(address _contractAddress) public onlyDeployer() {
     require(!initialized, "Already initialized");
     universalRaffleAddress = _contractAddress;
   }
@@ -40,10 +48,8 @@ contract RaffleTickets is IRaffleTickets, ERC721 {
   }
 
   function tokenURI(uint256 tokenId) public view override returns (string memory) {
-    (
-      UniversalRaffleCore.RaffleConfig memory raffle,
-      uint256 ticketCounter
-    ) = IUniversalRaffle(universalRaffleAddress).getRaffleInfo(1);
+    UniversalRaffleCore.RaffleConfig memory raffle = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(1);
+    UniversalRaffleCore.RaffleState memory raffleState = IUniversalRaffle(universalRaffleAddress).getRaffleState(1);
 
     string memory encoded = string(
       abi.encodePacked(
