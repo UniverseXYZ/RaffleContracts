@@ -36,6 +36,7 @@
 ## 2. NFT Deposit
 - Raffler deposits NFTs in each slot
 - Raffler can cancel/reconfigure up until start time
+- Raffler cannot withdraw NFTs unless entirely canceled and new raffle is created (warning message for deposits needed))
 
 ## 3. Raffle starts
 - People can bulk purchase raffle tickets and receive NFTs

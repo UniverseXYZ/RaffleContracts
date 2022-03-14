@@ -1,6 +1,5 @@
 const { expect } = require("chai");
-const { ethers } = require("hardhat");
-const { waffle, upgrades } = require('hardhat');
+const { ethers, waffle, upgrades } = require('hardhat');
 const { loadFixture } = waffle;
 
 const vrfCoordinator = '0x6168499c0cFfCaCD319c818142124B7A15E857ab';
@@ -122,11 +121,11 @@ describe("Raffle Setup Security", async function () {
 
     await mockNFT.mint(owner.address, 'nftURI');
     await mockNFT.setApprovalForAll(UniversalRaffle.address, true);
-    await UniversalRaffle.depositERC721(1, 1, [[1, mockNFT.address]]);
+    await UniversalRaffle.depositNFTsToRaffle(1, [1], [[[1, mockNFT.address]]]);
 
     await mockNFT.mint(owner.address, 'nftURI');
     await mockNFT.mint(owner.address, 'nftURI');
-    await UniversalRaffle.batchDepositToRaffle(2, [1, 2], [[[2, mockNFT.address]], [[3, mockNFT.address]]]);
+    await UniversalRaffle.depositNFTsToRaffle(2, [1, 2], [[[2, mockNFT.address]], [[3, mockNFT.address]]]);
 
     return { UniversalRaffle, RaffleTickets, VRFInstance, mockNFT, mockToken };
   }
@@ -146,9 +145,33 @@ describe("Raffle Setup Security", async function () {
   });
 
   it('should check raffle config after DAO updates', async () => {
-    const { UniversalRaffle, } = await loadFixture(raffleWithNFTs);
-    const raffleId = 1;
+    const [owner, addr1] = await ethers.getSigners();
+    const { UniversalRaffle, RaffleTickets, VRFInstance } = await loadFixture(raffleWithNFTs);
 
-    const config = await UniversalRaffle.getRaffleState(raffleId);
+    let config = await UniversalRaffle.getContractConfig();
+    expect(config[0]).to.equal(owner.address);
+    expect(config[1]).to.equal(RaffleTickets.address);
+    expect(config[2]).to.equal(VRFInstance.address);
+    expect(config[3]).to.equal(2);
+    expect(config[4]).to.equal(MAX_NUMBER_SLOTS);
+    expect(config[5]).to.equal(MAX_BULK_PURCHASE);
+    expect(config[6]).to.equal(NFT_SLOT_LIMIT);
+    expect(config[7]).to.equal(ROYALTY_FEE_BPS);
+    expect(config[8]).to.equal(false);
+    expect(config[9]).to.equal(true);
+
+    await UniversalRaffle.transferDAOownership(addr1.address);
+    await expect(UniversalRaffle.setRaffleConfigValue(0, 50)).to.be.reverted;
+    await UniversalRaffle.connect(addr1).setRaffleConfigValue(0, 50);
+    await UniversalRaffle.connect(addr1).setRaffleConfigValue(1, 100);
+    await UniversalRaffle.connect(addr1).setRaffleConfigValue(2, 50);
+    await UniversalRaffle.connect(addr1).setRaffleConfigValue(3, 1000);
+
+    config = await UniversalRaffle.getContractConfig();
+    expect(config[4]).to.equal(50);
+    expect(config[5]).to.equal(100);
+    expect(config[6]).to.equal(50);
+    expect(config[7]).to.equal(1000);
+    expect(config[8]).to.equal(true);
   })
 });

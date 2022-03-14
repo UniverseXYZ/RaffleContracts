@@ -59,15 +59,12 @@ contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
     }
 
     function getWinners(uint256 raffleId) public override onlyRaffleContract() {
-      UniversalRaffleCore.RaffleConfig memory raffle = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId);
-      UniversalRaffleCore.RaffleState memory raffleState = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
-
       uint256 requestId = COORDINATOR.requestRandomWords(
           keyHash,
           subscriptionId,
           3,
           300000,
-          raffle.totalSlots
+          IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId).totalSlots
       );
 
       vrfToRaffleId[requestId] = raffleId;

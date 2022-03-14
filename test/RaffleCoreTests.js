@@ -1,6 +1,5 @@
 const { expect } = require("chai");
-const { ethers } = require("hardhat");
-const { waffle, upgrades } = require('hardhat');
+const { ethers, waffle, upgrades } = require('hardhat');
 const { loadFixture } = waffle;
 
 const vrfCoordinator = '0x6168499c0cFfCaCD319c818142124B7A15E857ab';
@@ -27,12 +26,15 @@ async function findSigner(address) {
 }
 
 describe("Raffle Core Tests", async function () {
+  let randomWallet1 = ethers.Wallet.createRandom();
+  let randomWallet2 = ethers.Wallet.createRandom();
+
   const currentTime = Math.round((new Date()).getTime() / 1000);
 
   let purchaseToken;
   const zeroAddress = '0x0000000000000000000000000000000000000000';
-  const startTime = currentTime + 100;
-  const endTime = currentTime + 500;
+  const startTime = currentTime + 1000;
+  const endTime = currentTime + 5000;
   const maxTicketCount = 1000;
   const minTicketCount = 100;
   const tokenPrice = ethers.utils.parseEther("3.0");
@@ -87,7 +89,7 @@ describe("Raffle Core Tests", async function () {
       owner.address,
       RaffleTickets.address,
       VRFInstance.address,
-      [mockToken.address],
+      [],
       mockRoyaltiesRegistry.address
     );
 
@@ -96,16 +98,18 @@ describe("Raffle Core Tests", async function () {
     await RaffleTickets.initRaffleTickets(UniversalRaffle.address);
     await VRFInstance.initVRF(UniversalRaffle.address);
 
+    await UniversalRaffle.setSupportedERC20Tokens(mockToken.address, true);
+
     return { UniversalRaffle, RaffleTickets, mockNFT, mockToken };
   };
 
   async function launchRaffles() {
-    const [owner] = await ethers.getSigners();
+    const [owner, addr1] = await ethers.getSigners();
 
     const { UniversalRaffle, RaffleTickets, mockNFT, mockToken } = await loadFixture(deployContracts);
 
-    await UniversalRaffle.createRaffle([
-      owner.address,
+    await UniversalRaffle.connect(addr1).createRaffle([
+      addr1.address,
       zeroAddress,
       startTime,
       endTime,
@@ -116,8 +120,20 @@ describe("Raffle Core Tests", async function () {
       paymentSplits,
     ]);
 
-    await UniversalRaffle.createRaffle([
-      owner.address,
+    await UniversalRaffle.connect(addr1).createRaffle([
+      addr1.address,
+      purchaseToken,
+      startTime,
+      endTime,
+      maxTicketCount,
+      minTicketCount,
+      tokenPrice,
+      totalSlots,
+      paymentSplits,
+    ]);
+
+    await UniversalRaffle.connect(addr1).createRaffle([
+      addr1.address,
       purchaseToken,
       startTime,
       endTime,
@@ -132,18 +148,18 @@ describe("Raffle Core Tests", async function () {
   }
 
   async function raffleWithNFTs() {
-    const [owner] = await ethers.getSigners();
+    const [owner, addr1, addr2] = await ethers.getSigners();
 
     const { UniversalRaffle, RaffleTickets, mockNFT, mockToken } = await loadFixture(launchRaffles);
 
     let counter = 0;
     while (counter < 30) {
-      await mockNFT.mint(owner.address, 'nftURI');
+      await mockNFT.connect(addr1).mint(addr1.address, 'nftURI');
       counter++;
     }
 
-    const slotIndexes = [];
-    const NFTs = [];
+    let slotIndexes = [];
+    let NFTs = [];
     for (let i = 1; i <= 10; i++) {
       slotIndexes.push(i);
       NFTs.push([[i, mockNFT.address]]);
@@ -151,21 +167,49 @@ describe("Raffle Core Tests", async function () {
 
     NFTs[1].push([11, mockNFT.address]);
 
-    await mockNFT.setApprovalForAll(UniversalRaffle.address, true);
-    await UniversalRaffle.batchDepositToRaffle(1, slotIndexes, NFTs);
+    await mockNFT.connect(addr1).setApprovalForAll(UniversalRaffle.address, true);
+    await mockNFT.connect(addr2).setApprovalForAll(UniversalRaffle.address, true);
 
-    await UniversalRaffle.depositERC721(2, 1, [[12, mockNFT.address]]);
-    await UniversalRaffle.depositERC721(2, 2, [[13, mockNFT.address]]);
+    await UniversalRaffle.connect(addr1).depositNFTsToRaffle(1, slotIndexes, NFTs);
+    await UniversalRaffle.connect(addr1).depositNFTsToRaffle(2, [1], [[[12, mockNFT.address]]]);
+    await UniversalRaffle.connect(addr1).depositNFTsToRaffle(2, [2], [[[13, mockNFT.address]]]);
+
+    // Multi depositors
+    await UniversalRaffle.connect(addr1).setDepositors(3, [[addr1.address, 2], [addr2.address, 1]]);
+
+    counter = 0;
+    while (counter < 30) {
+      await mockNFT.connect(addr2).mint(addr2.address, 'nftURI');
+      counter++;
+    }
+
+    slotIndexes = [];
+    NFTs = [];
+    for (let i = 21; i <= 30; i++) {
+      slotIndexes.push(i - 20);
+      NFTs.push([[i, mockNFT.address]]);
+    }
+
+    await UniversalRaffle.connect(addr1).depositNFTsToRaffle(3, slotIndexes, NFTs);
+
+    slotIndexes = [];
+    NFTs = [];
+    for (let i = 31; i <= 40; i++) {
+      slotIndexes.push(i - 30);
+      NFTs.push([[i, mockNFT.address]]);
+    }
+
+    await UniversalRaffle.connect(addr2).depositNFTsToRaffle(3, slotIndexes, NFTs);
 
     return { UniversalRaffle, RaffleTickets, mockNFT, mockToken };
   }
 
   it('should create ERC20 raffle', async () => {
-    const [owner] = await ethers.getSigners();
+    const [owner, addr1] = await ethers.getSigners();
     const { UniversalRaffle } = await loadFixture(launchRaffles);
 
     const raffleInfo = await UniversalRaffle.getRaffleConfig(1);
-    expect(raffleInfo[0]).to.equal(owner.address);
+    expect(raffleInfo[0]).to.equal(addr1.address);
     expect(raffleInfo[1]).to.equal(zeroAddress);
     expect(raffleInfo[2].toNumber()).to.equal(startTime);
     expect(raffleInfo[3].toNumber()).to.equal(endTime);
@@ -177,11 +221,11 @@ describe("Raffle Core Tests", async function () {
   })
 
   it('should create ETH raffle', async () => {
-    const [owner] = await ethers.getSigners();
+    const [owner, addr1] = await ethers.getSigners();
     const { UniversalRaffle } = await loadFixture(launchRaffles);
 
     const raffleInfo = await UniversalRaffle.getRaffleConfig(1);
-    expect(raffleInfo[0]).to.equal(owner.address);
+    expect(raffleInfo[0]).to.equal(addr1.address);
     expect(raffleInfo[1]).to.equal(zeroAddress);
     expect(raffleInfo[2].toNumber()).to.equal(startTime);
     expect(raffleInfo[3].toNumber()).to.equal(endTime);
@@ -196,7 +240,7 @@ describe("Raffle Core Tests", async function () {
     const [owner] = await ethers.getSigners();
     const { UniversalRaffle, RaffleTickets, mockToken } = await loadFixture(raffleWithNFTs);
 
-    const startTime = currentTime + 100;
+    const startTime = currentTime + 2000;
     await ethers.provider.send('evm_setNextBlockTimestamp', [startTime]);
     await ethers.provider.send('evm_mine');
 
@@ -217,7 +261,7 @@ describe("Raffle Core Tests", async function () {
     const [owner] = await ethers.getSigners();
     const { UniversalRaffle, RaffleTickets } = await loadFixture(raffleWithNFTs);
 
-    const startTime = currentTime + 100;
+    const startTime = currentTime + 2000;
     await ethers.provider.send('evm_setNextBlockTimestamp', [startTime]);
     await ethers.provider.send('evm_mine');
 
@@ -234,18 +278,93 @@ describe("Raffle Core Tests", async function () {
     expect(await RaffleTickets.balanceOf(owner.address)).to.equal(40);
   })
 
-  it('should cancel raffle', async () => {
+  it('should reconfigure raffle', async () => {
+    const [owner, addr1] = await ethers.getSigners();
     const { UniversalRaffle, RaffleTickets } = await loadFixture(raffleWithNFTs);
     const raffleId = 1;
 
-    await UniversalRaffle.cancelRaffle(raffleId);
+    let config = await UniversalRaffle.getRaffleConfig(raffleId);
+
+    await expect(UniversalRaffle.reconfigureRaffle([
+      owner.address,
+      purchaseToken,
+      startTime + 1000,
+      endTime + 1000,
+      500,
+      10,
+      tokenPrice.div(3),
+      1,
+      [[randomWallet1.address, 1000], [randomWallet2.address, 500]]
+    ],
+      raffleId
+    )).to.be.reverted;
+
+    await UniversalRaffle.connect(addr1).reconfigureRaffle([
+      owner.address,
+      purchaseToken,
+      startTime + 1000,
+      endTime + 1000,
+      500,
+      10,
+      tokenPrice.div(3),
+      1,
+      [[randomWallet1.address, 1000], [randomWallet2.address, 500]]
+    ],
+      raffleId
+    )
+
+    config = await UniversalRaffle.getRaffleConfig(raffleId);
+    expect(config[0]).to.equal(addr1.address);
+    expect(config[1]).to.equal(purchaseToken);
+    expect(config[2]).to.equal(startTime + 1000);
+    expect(config[3]).to.equal(endTime + 1000);
+    expect(config[4]).to.equal(500);
+    expect(config[5]).to.equal(10);
+    expect(config[6]).to.equal(tokenPrice.div(3));
+    expect(config[7]).to.equal(totalSlots);
+    expect(config[8][0][0]).to.equal(randomWallet1.address);
+    expect(config[8][0][1]).to.equal(1000);
+    expect(config[8][1][0]).to.equal(randomWallet2.address);
+    expect(config[8][1][1]).to.equal(500);
+  })
+
+  it('should cancel raffle', async () => {
+    const [owner, addr1] = await ethers.getSigners();
+    const { UniversalRaffle, RaffleTickets } = await loadFixture(raffleWithNFTs);
+    const raffleId = 1;
+
+    await expect(UniversalRaffle.connect(addr1).withdrawDepositedERC721(raffleId, [[1, 1]])).to.be.reverted;
+
+    await UniversalRaffle.connect(addr1).cancelRaffle(raffleId);
+
+    for (let i = 1; i <= 10; i++) await UniversalRaffle.connect(addr1).withdrawDepositedERC721(raffleId, [[i, 1]]);
+
+    const config = await UniversalRaffle.getRaffleState(raffleId);
+    expect(config[2]).to.equal(10);
+  })
+
+  it('should cancel raffle multiple depositors', async () => {
+    const [owner, addr1, addr2] = await ethers.getSigners();
+    const { UniversalRaffle, RaffleTickets } = await loadFixture(raffleWithNFTs);
+    const raffleId = 3;
+
+    await UniversalRaffle.connect(addr1).cancelRaffle(raffleId);
+
+    for (let i = 1; i <= 10; i++) await UniversalRaffle.connect(addr1).withdrawDepositedERC721(raffleId, [[i, 1]]);
+
+    await expect(UniversalRaffle.connect(addr1).withdrawDepositedERC721(raffleId, 1, 2)).to.be.reverted;
+
+    for (let i = 1; i <= 10; i++) await UniversalRaffle.connect(addr2).withdrawDepositedERC721(raffleId, [[i, 2]]);
+
+    const config = await UniversalRaffle.getRaffleState(raffleId);
+    expect(config[2]).to.equal(20);
   })
 
   it('should refund raffle tickets', async () => {
     const [owner] = await ethers.getSigners();
     const { UniversalRaffle, mockToken } = await loadFixture(raffleWithNFTs);
 
-    const startTime = currentTime + 100;
+    const startTime = currentTime + 1000;
     await ethers.provider.send('evm_setNextBlockTimestamp', [startTime]);
     await ethers.provider.send('evm_mine');
 
@@ -256,7 +375,7 @@ describe("Raffle Core Tests", async function () {
     await UniversalRaffle.buyRaffleTickets(raffleId, buyAmount);
     await expect(UniversalRaffle.refundRaffleTickets(raffleId, [tokenId])).to.be.reverted;
 
-    const closeTime = currentTime + 1000;
+    const closeTime = currentTime + 10000;
     await ethers.provider.send('evm_setNextBlockTimestamp', [closeTime]);
     await ethers.provider.send('evm_mine');
 
@@ -295,26 +414,25 @@ describe("Raffle Core Tests", async function () {
     const { UniversalRaffle, RaffleTickets } = await loadFixture(raffleWithNFTs);
     const raffleId = 1;
 
-    await UniversalRaffle.toggleAllowList(raffleId);
+    await UniversalRaffle.connect(addr1).toggleAllowList(raffleId);
     let config = await UniversalRaffle.getRaffleState(raffleId);
     expect(config[3]).to.equal(true);
-    await UniversalRaffle.toggleAllowList(raffleId);
+    await UniversalRaffle.connect(addr1).toggleAllowList(raffleId);
     config = await UniversalRaffle.getRaffleState(raffleId);
     expect(config[3]).to.equal(false);
-    await UniversalRaffle.toggleAllowList(raffleId);
+    await UniversalRaffle.connect(addr1).toggleAllowList(raffleId);
 
     const allowList = [];
     allowList.push([owner.address, 3]);
     allowList.push([addr1.address, 2]);
     allowList.push([addr2.address, 1]);
     allowList.push([addr3.address, 2]);
-    allowList.push([addr4.address, 1]);
 
-    await UniversalRaffle.setAllowList(raffleId, allowList);
+    await UniversalRaffle.connect(addr1).setAllowList(raffleId, allowList);
     const allowance = await UniversalRaffle.getAllowList(raffleId, owner.address);
     expect(allowance).to.equal(3);
 
-    const startTime = currentTime + 100;
+    const startTime = currentTime + 2000;
     await ethers.provider.send('evm_setNextBlockTimestamp', [startTime]);
     await ethers.provider.send('evm_mine');
 
@@ -322,13 +440,14 @@ describe("Raffle Core Tests", async function () {
     await UniversalRaffle.buyRaffleTickets(raffleId, buyAmount, { value: tokenPrice.mul(buyAmount) });
     await expect(UniversalRaffle.buyRaffleTickets(raffleId, 1, { value: tokenPrice })).to.be.reverted;
     await expect(UniversalRaffle.connect(addr1).buyRaffleTickets(raffleId, buyAmount, { value: tokenPrice.mul(buyAmount) })).to.be.reverted;
+    await expect(UniversalRaffle.connect(addr4).buyRaffleTickets(raffleId, 1, { value: tokenPrice.mul(buyAmount) })).to.be.reverted;
   })
 
   it('should finalize raffle and claim prizes', async () => {
     const [owner, addr1, addr2, addr3, addr4] = await ethers.getSigners();
     const { UniversalRaffle, mockNFT, RaffleTickets } = await loadFixture(raffleWithNFTs);
 
-    const startTime = currentTime + 100;
+    const startTime = currentTime + 2000;
     await ethers.provider.send('evm_setNextBlockTimestamp', [startTime]);
     await ethers.provider.send('evm_mine');
 
@@ -340,7 +459,7 @@ describe("Raffle Core Tests", async function () {
     await UniversalRaffle.connect(addr3).buyRaffleTickets(raffleId, buyAmount, { value: tokenPrice.mul(buyAmount) });
     await UniversalRaffle.connect(addr4).buyRaffleTickets(raffleId, buyAmount, { value: tokenPrice.mul(buyAmount) });
 
-    const endTime = currentTime + 500;
+    const endTime = currentTime + 10000;
     await ethers.provider.send('evm_setNextBlockTimestamp', [endTime]);
     await ethers.provider.send('evm_mine');
 
@@ -366,6 +485,47 @@ describe("Raffle Core Tests", async function () {
     let config = await UniversalRaffle.getRaffleState(raffleId);
     expect(config[1]).to.equal(11);
     expect(config[2]).to.equal(11);
+    expect(config[5]).to.equal(true);
+    expect(config[4]).to.equal(false);
+  });
+
+  it('should finalize raffle and claim multiple prizes & depositors', async () => {
+    const [owner, addr1, addr2, addr3, addr4] = await ethers.getSigners();
+    const { UniversalRaffle, mockNFT, mockToken, RaffleTickets } = await loadFixture(raffleWithNFTs);
+
+    const startTime = currentTime + 2000;
+    await ethers.provider.send('evm_setNextBlockTimestamp', [startTime]);
+    await ethers.provider.send('evm_mine');
+
+    const raffleId = 3;
+    const buyAmount = 50;
+    await mockToken.approve(UniversalRaffle.address, tokenPrice.mul(buyAmount * 2));
+    await UniversalRaffle.buyRaffleTickets(raffleId, buyAmount, { value: tokenPrice.mul(buyAmount) });
+    await UniversalRaffle.buyRaffleTickets(raffleId, buyAmount, { value: tokenPrice.mul(buyAmount) });
+
+    const endTime = currentTime + 10000;
+    await ethers.provider.send('evm_setNextBlockTimestamp', [endTime]);
+    await ethers.provider.send('evm_mine');
+
+    await UniversalRaffle.finalizeRaffle(raffleId);
+    await expect(UniversalRaffle.finalizeRaffle(raffleId)).to.be.reverted;
+
+    const check = await UniversalRaffle.getSlotInfo(raffleId, 1);
+    const winner = await UniversalRaffle.getSlotWinner(raffleId, 1);
+    expect(check[2]).to.equal(winner);
+
+    let i = 1;
+    for (let i = 1; i <= 10; i++) {
+      const slot = await UniversalRaffle.getSlotInfo(raffleId, i);
+      const depositedNFTs = await UniversalRaffle.getDepositedNftsInSlot(raffleId, i);
+      expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(UniversalRaffle.address);
+      await UniversalRaffle.connect(await findSigner(slot[2])).claimERC721Rewards(raffleId, i, 2);
+      expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(slot[2]);
+    }
+
+    let config = await UniversalRaffle.getRaffleState(raffleId);
+    expect(config[1]).to.equal(20);
+    expect(config[2]).to.equal(20);
     expect(config[5]).to.equal(true);
     expect(config[4]).to.equal(false);
   });

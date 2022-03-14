@@ -27,7 +27,13 @@ interface IUniversalRaffle {
 
   /// @notice Change raffle configuration
   /// @param config Raffle configuration above
+  /// @param existingRaffleId The raffle id
   function reconfigureRaffle(UniversalRaffleCore.RaffleConfig calldata config, uint256 existingRaffleId) external returns (uint256);
+
+  /// @notice Sets addresses able to deposit NFTs to raffle
+  /// @param raffleId The raffle id
+  /// @param allowList Array of [address, 1 for true, 0 for false]
+  function setDepositors(uint256 raffleId, UniversalRaffleCore.AllowList[] calldata allowList) external;
 
   /// @notice Sets allow list addresses and allowances
   /// @param raffleId The raffle id
@@ -42,30 +48,18 @@ interface IUniversalRaffle {
   /// @param raffleId The raffle id
   /// @param slotIndices Array of slot indexes
   /// @param tokens Array of ERC721 arrays
-  function batchDepositToRaffle(
+  function depositNFTsToRaffle(
       uint256 raffleId,
       uint256[] calldata slotIndices,
       UniversalRaffleCore.NFT[][] calldata tokens
   ) external;
 
-  /// @notice Deposit ERC721 assets to the specified Raffle
-  /// @param raffleId The raffle id
-  /// @param slotIndex Index of the slot
-  /// @param tokens Array of ERC721 objects
-  function depositERC721(
-      uint256 raffleId,
-      uint256 slotIndex,
-      UniversalRaffleCore.NFT[] calldata tokens
-  ) external returns (uint256[] memory);
-
   /// @notice Withdraws the deposited ERC721 before an auction has started
   /// @param raffleId The raffle id
-  /// @param slotIndex The slot index
-  /// @param amount The amount which should be withdrawn
+  /// @param slotNftIndexes The slot index and nft index in array [[slot index, nft index]]
   function withdrawDepositedERC721(
       uint256 raffleId,
-      uint256 slotIndex,
-      uint256 amount
+      uint256[][] calldata slotNftIndexes
   ) external;
 
   /// @notice Purchases raffle tickets
@@ -101,32 +95,31 @@ interface IUniversalRaffle {
   /// @param raffleId The raffle id
   function cancelRaffle(uint256 raffleId) external;
 
-  // /// @notice Gets the minimum reserve price for auciton slot
-  // /// @param raffleId The raffle id
-  // /// @param slotIndex The slot index
-  // /// @param nftSlotIndex The nft slot index
-  // function distributeSecondarySaleFees(
-  //     uint256 raffleId,
-  //     uint256 slotIndex,
-  //     uint256 nftSlotIndex
-  // ) external;
-
-  // /// @notice Withdraws the aggregated royalites amount of specific token to a specified address
-  // /// @param token The address of the token to withdraw
-  // function distributeRoyalties(address token) external returns(uint256);
+  /// @notice Withdraws the captured revenue from the auction to the auction owner. Can be called multiple times after captureSlotRevenue has been called.
+  /// @param raffleId The auction id
+  function distributeCapturedRaffleRevenue(uint256 raffleId) external;
 
 
-  /// @notice Sets maximum number of tickets someone can buy in one bulk purchase
-  /// @param maxBulkPurchaseCount The bulk count
-  function setMaxBulkPurchaseCount(uint256 maxBulkPurchaseCount) external returns(uint256);
+  /// @notice Gets the minimum reserve price for auciton slot
+  /// @param raffleId The raffle id
+  /// @param slotIndex The slot index
+  /// @param nftSlotIndex The nft slot index
+  function distributeSecondarySaleFees(
+      uint256 raffleId,
+      uint256 slotIndex,
+      uint256 nftSlotIndex
+  ) external;
 
-  /// @notice Sets the NFT slot limit for raffle
-  /// @param nftSlotLimit The royalty percentage
-  function setNftSlotLimit(uint256 nftSlotLimit) external returns(uint256);
+  /// @notice Withdraws the aggregated royalites amount of specific token to a specified address
+  /// @param token The address of the token to withdraw
+  function distributeRoyalties(address token) external returns(uint256);
 
-  /// @notice Sets the percentage of the royalty which wil be kept from each sale
-  /// @param royaltyFeeBps The royalty percentage in Basis points (1000 - 10%)
-  function setRoyaltyFeeBps(uint256 royaltyFeeBps) external returns(uint256);
+  /// @notice Sets a raffle config value
+  /// @param value The value of the configuration
+  /// configType value 0: maxBulkPurchaseCount - Sets maximum number of tickets someone can buy in one bulk purchase
+  /// configType value 1: Sets the NFT slot limit for raffle
+  /// configType value 2: Sets the percentage of the royalty which wil be kept from each sale in basis points (1000 - 10%)
+  function setRaffleConfigValue(uint256 configType, uint256 value) external returns(uint256);
 
   /// @notice Sets the RoyaltiesRegistry
   /// @param royaltiesRegistry The royalties registry address
