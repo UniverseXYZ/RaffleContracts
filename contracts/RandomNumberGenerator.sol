@@ -53,12 +53,12 @@ contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
       _;
     }
 
-    function initVRF(address _contractAddress) public override onlyDeployer() {
+    function initVRF(address _contractAddress) external override onlyDeployer() {
       require(!initialized, "Already initialized");
       universalRaffleAddress = _contractAddress;
     }
 
-    function getWinners(uint256 raffleId) public override onlyRaffleContract() {
+    function getWinners(uint256 raffleId) external override onlyRaffleContract() {
       uint256 requestId = COORDINATOR.requestRandomWords(
           keyHash,
           subscriptionId,
@@ -91,7 +91,7 @@ contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
     }
 
     // Used for testing purposes only
-    function getWinnersMock(uint256 raffleId) public override onlyRaffleContract() {
+    function getWinnersMock(uint256 raffleId) external override onlyRaffleContract() {
         UniversalRaffleCore.RaffleConfig memory raffle = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId);
         UniversalRaffleCore.RaffleState memory raffleState = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
 
