@@ -96,6 +96,7 @@ describe("Raffle Setup Security", async function () {
       minTicketCount,
       tokenPrice,
       totalSlots,
+      'Raffle Raffle Raffle',
       paymentSplits,
     ]);
 
@@ -108,6 +109,7 @@ describe("Raffle Setup Security", async function () {
       minTicketCount,
       tokenPrice,
       totalSlots,
+      'Raffle Raffle Raffle',
       paymentSplits,
     ]);
 

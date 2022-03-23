@@ -14,13 +14,15 @@ const subscriptionId = 677;
 async function main() {
   const currentTime = Math.round((new Date()).getTime() / 1000);
 
+  const TEST_VRF = false;
   const zeroAddress = '0x0000000000000000000000000000000000000000';
   const startTime = currentTime + 600; // 10 mins
   const endTime = currentTime + 1200; // 20 mins
   const maxTicketCount = 1000;
-  const minTicketCount = 100;
+  const minTicketCount = 10;
   const tokenPrice = ethers.utils.parseEther("0.0007");
   const totalSlots = 2;
+  const raffleName = 'illestrater\'s Raffle';
   const paymentSplits = [];
 
   const [owner] = await ethers.getSigners();
@@ -54,6 +56,7 @@ async function main() {
   });
 
   const UniversalRaffle = await UniversalRaffleFactory.deploy(
+    TEST_VRF,
     2000,
     50,
     100,
@@ -80,6 +83,7 @@ async function main() {
     minTicketCount,
     tokenPrice,
     totalSlots,
+    raffleName,
     paymentSplits,
   ]);
 
@@ -133,6 +137,7 @@ async function main() {
     await hre.run("verify:verify", {
       address: UniversalRaffle.address,
       constructorArguments: [
+        TEST_VRF,
         2000,
         50,
         100,

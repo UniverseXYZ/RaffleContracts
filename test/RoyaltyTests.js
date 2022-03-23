@@ -121,6 +121,7 @@ describe("Raffle Royalty Tests", async function () {
       minTicketCount,
       tokenPrice,
       totalSlots,
+      'Raffle Raffle Raffle',
       emptySplits,
     ]);
 
@@ -133,6 +134,7 @@ describe("Raffle Royalty Tests", async function () {
       minTicketCount,
       tokenPrice,
       totalSlots,
+      'Raffle Raffle Raffle',
       emptySplits,
     ]);
 
@@ -145,6 +147,7 @@ describe("Raffle Royalty Tests", async function () {
       minTicketCount,
       tokenPrice,
       totalSlots,
+      'Raffle Raffle Raffle',
       paymentSplits,
     ]);
 

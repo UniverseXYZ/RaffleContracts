@@ -25,6 +25,7 @@ library UniversalRaffleCore {
         uint256 minTicketCount;
         uint256 ticketPrice;
         uint32 totalSlots;
+        string raffleName;
         PaymentSplit[] paymentSplits;
     }
 
@@ -262,6 +263,7 @@ library UniversalRaffleCore {
         ds.raffleConfigs[raffleId].maxTicketCount = config.maxTicketCount;
         ds.raffleConfigs[raffleId].minTicketCount = config.minTicketCount;
         ds.raffleConfigs[raffleId].ticketPrice = config.ticketPrice;
+        ds.raffleConfigs[raffleId].raffleName = config.raffleName;
 
         uint256 checkSum = 0;
         delete ds.raffleConfigs[raffleId].paymentSplits;
