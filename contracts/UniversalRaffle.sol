@@ -17,6 +17,12 @@ import "./interfaces/IRoyaltiesProvider.sol";
 import "./lib/LibPart.sol";
 import "./UniversalRaffleCore.sol";
 
+/* TODO: 
+ * Multiple slot deposits in one transaction not working
+ * Consumer is not decentralized and can halt raffle contracts
+ * Market winners as ticket numbers instead of addresses - thus tickets can be marked
+ */
+
 contract UniversalRaffle is 
     IUniversalRaffle,
     ERC721Holder,
