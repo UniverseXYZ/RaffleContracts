@@ -110,23 +110,7 @@ contract UniversalRaffle is
         uint256[] calldata slotIndices,
         UniversalRaffleCore.NFT[][] calldata tokens
     ) external override {
-        (
-            UniversalRaffleCore.Storage storage ds,
-            UniversalRaffleCore.RaffleConfig storage raffle,
-        ) = getRaffleData(raffleId);
-
-        require(
-            slotIndices.length <= raffle.totalSlots &&
-                slotIndices.length <= 10 &&
-                slotIndices.length == tokens.length,
-            "E16"
-        );
-
-        for (uint256 i; i < slotIndices.length;) {
-            require(tokens[i].length <= 5, "E17");
-            UniversalRaffleCore.depositERC721(raffleId, slotIndices[i], tokens[i]);
-            unchecked { i++; }
-        }
+        UniversalRaffleCore.depositNFTsToRaffle(raffleId, slotIndices, tokens);
     }
 
     function withdrawDepositedERC721(

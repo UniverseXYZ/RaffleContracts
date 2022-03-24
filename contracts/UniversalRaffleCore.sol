@@ -304,11 +304,33 @@ library UniversalRaffleCore {
         raffle.useAllowList = !raffle.useAllowList;
     }
 
+    function depositNFTsToRaffle(
+        uint256 raffleId,
+        uint256[] calldata slotIndices,
+        NFT[][] calldata tokens
+    ) external onlyRaffleSetup(raffleId) {
+        Storage storage ds = raffleStorage();
+        RaffleConfig storage raffle = ds.raffleConfigs[raffleId];
+
+        require(
+            slotIndices.length <= raffle.totalSlots &&
+                slotIndices.length <= 10 &&
+                slotIndices.length == tokens.length,
+            "E16"
+        );
+
+        for (uint256 i; i < slotIndices.length;) {
+            require(tokens[i].length <= 5, "E17");
+            depositERC721(raffleId, slotIndices[i], tokens[i]);
+            unchecked { i++; }
+        }
+    }
+
     function depositERC721(
         uint256 raffleId,
         uint256 slotIndex,
         NFT[] calldata tokens
-    ) external onlyRaffleSetup(raffleId) returns (uint256[] memory) {
+    ) internal returns (uint256[] memory) {
         Storage storage ds = raffleStorage();
         Raffle storage raffle = ds.raffles[raffleId];
         RaffleConfig storage raffleConfig = ds.raffleConfigs[raffleId];
