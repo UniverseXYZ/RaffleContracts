@@ -6,7 +6,7 @@
 pragma solidity 0.8.11;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -167,8 +167,7 @@ contract UniversalRaffle is
                 require(returnExcessStatus, "Failed to return excess");
             }
         } else {
-            IERC20 paymentToken = IERC20(raffleInfo.ERC20PurchaseToken);
-            require(paymentToken.transferFrom(msg.sender, address(this), amount.mul(raffleInfo.ticketPrice)), "TX FAILED");
+            SafeERC20.safeTransferFrom(IERC20(raffleInfo.ERC20PurchaseToken), msg.sender, address(this), amount.mul(raffleInfo.ticketPrice));
         }
 
         raffle.ticketCounter += amount;
@@ -332,8 +331,7 @@ contract UniversalRaffle is
         }
 
         if (tokenAddress != address(0) && value > 0) {
-            IERC20 token = IERC20(tokenAddress);
-            require(token.transfer(address(to), value), "TX FAILED");
+            SafeERC20.safeTransfer(IERC20(tokenAddress), address(to), value);
         }
     }
 
