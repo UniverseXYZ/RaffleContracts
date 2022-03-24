@@ -59,7 +59,7 @@ interface IUniversalRaffle {
   /// @param slotNftIndexes The slot index and nft index in array [[slot index, nft index]]
   function withdrawDepositedERC721(
       uint256 raffleId,
-      uint256[][] calldata slotNftIndexes
+      UniversalRaffleCore.SlotIndexAndNFTIndex[] calldata slotNftIndexes
   ) external;
 
   /// @notice Purchases raffle tickets

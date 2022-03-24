@@ -69,6 +69,11 @@ library UniversalRaffleCore {
         address winner;
     }
 
+    struct SlotIndexAndNFTIndex {
+        uint256 slotIndex;
+        uint256 NFTIndex;
+    }
+
     struct NFT {
         uint256 tokenId;
         address tokenAddress;
@@ -372,7 +377,7 @@ library UniversalRaffleCore {
 
     function withdrawDepositedERC721(
         uint256 raffleId,
-        uint256[][] calldata slotNftIndexes
+        SlotIndexAndNFTIndex[] calldata slotNftIndexes
     ) external {
         Storage storage ds = raffleStorage();
         Raffle storage raffle = ds.raffles[raffleId];
@@ -383,11 +388,11 @@ library UniversalRaffleCore {
         raffle.withdrawnNFTCounter += slotNftIndexes.length;
         raffle.depositedNFTCounter -= slotNftIndexes.length;
         for (uint256 i; i < slotNftIndexes.length;) {
-            ds.raffles[raffleId].slots[slotNftIndexes[i][0]].withdrawnNFTCounter += 1;
+            ds.raffles[raffleId].slots[slotNftIndexes[i].slotIndex].withdrawnNFTCounter += 1;
             _withdrawDepositedERC721(
                 raffleId,
-                slotNftIndexes[i][0],
-                slotNftIndexes[i][1]
+                slotNftIndexes[i].slotIndex,
+                slotNftIndexes[i].NFTIndex
             );
             unchecked { i++; }
         }

@@ -131,7 +131,7 @@ contract UniversalRaffle is
 
     function withdrawDepositedERC721(
         uint256 raffleId,
-        uint256[][] calldata slotNftIndexes
+        UniversalRaffleCore.SlotIndexAndNFTIndex[] calldata slotNftIndexes
     ) external override nonReentrant {
         UniversalRaffleCore.withdrawDepositedERC721(raffleId, slotNftIndexes);
     }
