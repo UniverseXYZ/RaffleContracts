@@ -177,6 +177,7 @@ describe("Raffle Core Tests", async function () {
     await UniversalRaffle.connect(addr1).depositNFTsToRaffle(1, slotIndexes, NFTs);
     await UniversalRaffle.connect(addr1).depositNFTsToRaffle(2, [1], [[[12, mockNFT.address]]]);
     await UniversalRaffle.connect(addr1).depositNFTsToRaffle(2, [2], [[[13, mockNFT.address]]]);
+    await UniversalRaffle.connect(addr1).depositNFTsToRaffle(2, [1, 2], [[[14, mockNFT.address]], [[15, mockNFT.address]]]);
 
     // Multi depositors
     await UniversalRaffle.connect(addr1).setDepositors(3, [[addr1.address, 2], [addr2.address, 1]]);
@@ -477,20 +478,16 @@ describe("Raffle Core Tests", async function () {
     await UniversalRaffle.finalizeRaffle(raffleId);
     await expect(UniversalRaffle.finalizeRaffle(raffleId)).to.be.reverted;
 
-    const check = await UniversalRaffle.getSlotInfo(raffleId, 1);
-    const winner = await UniversalRaffle.getSlotWinner(raffleId, 1);
-    expect(check[2]).to.equal(winner);
-
     let i = 1;
     for (let i = 1; i <= 10; i++) {
       const slot = await UniversalRaffle.getSlotInfo(raffleId, i);
       const depositedNFTs = await UniversalRaffle.getDepositedNftsInSlot(raffleId, i);
       expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(UniversalRaffle.address);
-      await UniversalRaffle.connect(await findSigner(slot[2])).claimERC721Rewards(raffleId, i, 1);
+      await UniversalRaffle.connect(await findSigner(slot[3])).claimERC721Rewards(raffleId, i, 1);
       if (depositedNFTs.length == 2) {
-        await UniversalRaffle.connect(await findSigner(slot[2])).claimERC721Rewards(raffleId, i, 1);
+        await UniversalRaffle.connect(await findSigner(slot[3])).claimERC721Rewards(raffleId, i, 1);
       }
-      expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(slot[2]);
+      expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(slot[3]);
     }
 
     let config = await UniversalRaffle.getRaffleState(raffleId);
@@ -521,17 +518,14 @@ describe("Raffle Core Tests", async function () {
     await UniversalRaffle.finalizeRaffle(raffleId);
     await expect(UniversalRaffle.finalizeRaffle(raffleId)).to.be.reverted;
 
-    const check = await UniversalRaffle.getSlotInfo(raffleId, 1);
-    const winner = await UniversalRaffle.getSlotWinner(raffleId, 1);
-    expect(check[2]).to.equal(winner);
-
     let i = 1;
     for (let i = 1; i <= 10; i++) {
       const slot = await UniversalRaffle.getSlotInfo(raffleId, i);
+      console.log(slot);
       const depositedNFTs = await UniversalRaffle.getDepositedNftsInSlot(raffleId, i);
       expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(UniversalRaffle.address);
-      await UniversalRaffle.connect(await findSigner(slot[2])).claimERC721Rewards(raffleId, i, 2);
-      expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(slot[2]);
+      await UniversalRaffle.connect(await findSigner(slot[3])).claimERC721Rewards(raffleId, i, 2);
+      expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(slot[3]);
     }
 
     let config = await UniversalRaffle.getRaffleState(raffleId);

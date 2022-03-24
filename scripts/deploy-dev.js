@@ -21,7 +21,7 @@ async function main() {
   const maxTicketCount = 1000;
   const minTicketCount = 10;
   const tokenPrice = ethers.utils.parseEther("0.0007");
-  const totalSlots = 2;
+  const totalSlots = 10;
   const raffleName = 'illestrater\'s Raffle';
   const paymentSplits = [];
 

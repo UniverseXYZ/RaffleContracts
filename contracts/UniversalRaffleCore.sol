@@ -35,7 +35,6 @@ library UniversalRaffleCore {
         uint256 withdrawnNFTCounter;
         uint256 depositorCount;
         mapping(uint256 => Slot) slots;
-        mapping(uint256 => address) winners;
         mapping(uint256 => bool) refunds;
         mapping(address => uint256) allowList;
         mapping(address => bool) depositors;
@@ -58,6 +57,7 @@ library UniversalRaffleCore {
     struct Slot {
         uint256 depositedNFTCounter;
         uint256 withdrawnNFTCounter;
+        uint256 winnerId;
         address winner;
         mapping(uint256 => DepositedNFT) depositedNFTs;
     }
@@ -65,6 +65,7 @@ library UniversalRaffleCore {
     struct SlotInfo {
         uint256 depositedNFTCounter;
         uint256 withdrawnNFTCounter;
+        uint256 winnerId;
         address winner;
     }
 
@@ -441,7 +442,7 @@ library UniversalRaffleCore {
         uint256 totalWithdrawn = winningSlot.withdrawnNFTCounter;
 
         require(raffle.isFinalized, "E24");
-        require(raffle.winners[slotIndex] == msg.sender, "E31");
+        require(winningSlot.winner == msg.sender, "E31");
 
         require(amount <= 40, "E25");
         require(amount <= totalDeposited - totalWithdrawn, "E33");
@@ -600,14 +601,10 @@ library UniversalRaffleCore {
         SlotInfo memory slotInfo = SlotInfo(
             slot.depositedNFTCounter,
             slot.withdrawnNFTCounter,
+            slot.winnerId,
             slot.winner
         );
         return slotInfo;
-    }
-
-    function getSlotWinner(uint256 raffleId, uint256 slotIndex) external view returns (address) {
-        Storage storage ds = raffleStorage();
-        return ds.raffles[raffleId].winners[slotIndex];
     }
 
     function getContractConfig() external view returns (ContractConfigByDAO memory) {

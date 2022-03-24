@@ -51,11 +51,29 @@ contract RaffleTickets is IRaffleTickets, ERC721 {
 
   function tokenURI(uint256 tokenId) public view override returns (string memory) {
     uint256 raffleId = HelperFunctions.safeParseInt(HelperFunctions.substring(HelperFunctions.toString(tokenId), bytes(HelperFunctions.toString(tokenId)).length - 8, bytes(HelperFunctions.toString(tokenId)).length - 7));
-    console.log(raffleId);
     UniversalRaffleCore.RaffleConfig memory raffle = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId);
     UniversalRaffleCore.RaffleState memory raffleState = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
     uint256 ticketId = tokenId - (raffleId * 10000000);
-    console.log(ticketId);
+
+    string memory claim;
+    string memory time;
+    if (block.timestamp > raffle.endTime) {
+      if (raffleState.isFinalized) claim = 'Void';
+      else claim = 'Pending Results';
+      time = 'Ended';
+    } else {
+      claim = 'Awaiting Results';
+      time = 'Pre-Raffle';
+    }
+
+    for (uint256 i = 0; i < raffle.totalSlots; i++) {
+      UniversalRaffleCore.SlotInfo memory slot = IUniversalRaffle(universalRaffleAddress).getSlotInfo(raffleId, i + 1);
+      if (slot.winnerId == tokenId) {
+        if (slot.depositedNFTCounter == slot.withdrawnNFTCounter) claim = 'Prize Claimed';
+        else if (slot.withdrawnNFTCounter > 0) claim = 'Partially Claimed';
+        else if (slot.withdrawnNFTCounter == 0) claim = 'Winner Unclaimed';
+      }
+    }
 
     string memory encoded = string(
       abi.encodePacked(
@@ -85,9 +103,9 @@ contract RaffleTickets is IRaffleTickets, ERC721 {
                     '</text><text x="50" y="290" font-family="Courier New, monospace" font-size="20">Ticket #</text><text x="47" y="330" font-family="Courier New, monospace" font-size="30">',
                     HelperFunctions.toString(ticketId),
                     '</text><text x="230" y="290" font-family="Courier New, monospace" font-size="20">Time</text><text x="230" y="330" font-family="Courier New, monospace" font-size="30">',
-                    'Ended',
+                    time,
                     '</text><text x="450" y="290" font-family="Courier New, monospace" font-size="20">Claim</text><text x="450" y="330" font-family="Courier New, monospace" font-size="30">',
-                    'Void',
+                    claim,
                     '</text></g><rect x="0" y="0" width="800" height="360" clip-path="url(#ticket)" filter="url(#noise)" opacity=".4" /></svg>'
                   )
                 )

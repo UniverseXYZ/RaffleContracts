@@ -12,6 +12,7 @@ import "./interfaces/IRandomNumberGenerator.sol";
 import "./interfaces/IUniversalRaffle.sol";
 import "./UniversalRaffleCore.sol";
 import "./RaffleTickets.sol";
+import "hardhat/console.sol";
 
 contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
     address private creationAddress;
@@ -79,15 +80,29 @@ contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
         UniversalRaffleCore.RaffleConfig memory raffle = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId);
         UniversalRaffleCore.RaffleState memory raffleState = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
 
+        uint256[] memory winnerIds = new uint256[](raffle.totalSlots);
         address[] memory winners = new address[](raffle.totalSlots);
         for (uint32 i = 0; i < raffle.totalSlots; i++) {
-            winners[i] = raffleTickets.ownerOf(
-              (raffleId * 10000000) +
-              (randomWords[i] % raffleState.ticketCounter) + 1
-            );
+          uint256 winnerId = (raffleId * 10000000) + (randomWords[i] % raffleState.ticketCounter) + 1;
+
+          bool stored = false;
+          while (!stored) {
+            for (uint32 j = 0; j < winnerIds.length; j++) {
+              if (winnerIds[j] == winnerId) {
+                if (((randomWords[i] % raffleState.ticketCounter) + j + 1) == raffleState.ticketCounter) {
+                  winnerId = (raffleId * 10000000) + 1;
+                } else winnerId++;
+              } else {
+                stored = true;
+              }
+            }
+          }
+
+          winnerIds[i] = winnerId;
+          winners[i] = raffleTickets.ownerOf(winnerId);
         }
 
-        IUniversalRaffle(universalRaffleAddress).setWinners(raffleId, winners);
+        IUniversalRaffle(universalRaffleAddress).setWinners(raffleId, winnerIds, winners);
     }
 
     // Used for testing purposes only
@@ -95,20 +110,34 @@ contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
         UniversalRaffleCore.RaffleConfig memory raffle = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId);
         UniversalRaffleCore.RaffleState memory raffleState = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
 
-        uint256[] memory words = new uint256[](raffle.totalSlots);
+        uint256[] memory randomWords = new uint256[](raffle.totalSlots);
         for (uint256 i = 0; i < raffle.totalSlots; i++) {
             uint256 randomNumber = uint256(keccak256(abi.encodePacked(block.difficulty, block.timestamp, raffleId + i)));
-            words[i] = randomNumber;
+            randomWords[i] = randomNumber;
         }
 
+        uint256[] memory winnerIds = new uint256[](raffle.totalSlots);
         address[] memory winners = new address[](raffle.totalSlots);
         for (uint32 i = 0; i < raffle.totalSlots; i++) {
-            winners[i] = raffleTickets.ownerOf(
-              (raffleId * 10000000) +
-              (words[i] % raffleState.ticketCounter) + 1
-            );
+          uint256 winnerId = (raffleId * 10000000) + (randomWords[i] % raffleState.ticketCounter) + 1;
+
+          bool stored = false;
+          while (!stored) {
+            for (uint32 j = 0; j < winnerIds.length; j++) {
+              if (winnerIds[j] == winnerId) {
+                if (((randomWords[i] % raffleState.ticketCounter) + j + 1) == raffleState.ticketCounter) {
+                  winnerId = (raffleId * 10000000) + 1;
+                } else winnerId++;
+              } else {
+                stored = true;
+              }
+            }
+          }
+
+          winnerIds[i] = winnerId;
+          winners[i] = raffleTickets.ownerOf(winnerId);
         }
 
-        IUniversalRaffle(universalRaffleAddress).setWinners(raffleId, winners);
+        IUniversalRaffle(universalRaffleAddress).setWinners(raffleId, winnerIds, winners);
     }
 }

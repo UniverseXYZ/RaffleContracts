@@ -18,9 +18,7 @@ import "./lib/LibPart.sol";
 import "./UniversalRaffleCore.sol";
 
 /* TODO: 
- * Multiple slot deposits in one transaction not working
  * Consumer is not decentralized and can halt raffle contracts
- * Market winners as ticket numbers instead of addresses - thus tickets can be marked
  */
 
 contract UniversalRaffle is 
@@ -194,11 +192,11 @@ contract UniversalRaffle is
         }
     }
 
-    function setWinners(uint256 raffleId, address[] memory winners) external {
+    function setWinners(uint256 raffleId, uint256[] memory winnerIds, address[] memory winners) external {
         UniversalRaffleCore.Storage storage ds = UniversalRaffleCore.raffleStorage();
         require(msg.sender == ds.vrfAddress, "No permission");
         for (uint32 i = 1; i <= winners.length; i++) {
-            ds.raffles[raffleId].winners[i] = winners[i - 1];
+            ds.raffles[raffleId].slots[i].winnerId = winnerIds[i - 1];
             ds.raffles[raffleId].slots[i].winner = winners[i - 1];
         }
 
@@ -363,10 +361,6 @@ contract UniversalRaffle is
 
     function getSlotInfo(uint256 raffleId, uint256 slotIndex) external view override returns (UniversalRaffleCore.SlotInfo memory) {
         return UniversalRaffleCore.getSlotInfo(raffleId, slotIndex);
-    }
-
-    function getSlotWinner(uint256 raffleId, uint256 slotIndex) external view override returns (address) {
-        return UniversalRaffleCore.getSlotWinner(raffleId, slotIndex);
     }
 
     function getContractConfig() external view override returns (UniversalRaffleCore.ContractConfigByDAO memory) {

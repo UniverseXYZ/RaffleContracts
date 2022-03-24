@@ -74,7 +74,7 @@ interface IUniversalRaffle {
   /// @notice Select winners of raffle
   /// @param raffleId The raffle id
   /// @param winners Array of winner addresses
-  function setWinners(uint256 raffleId, address[] memory winners) external;
+  function setWinners(uint256 raffleId, uint256[] memory winnerIds, address[] memory winners) external;
 
   /// @notice Claims and distributes the NFTs from a winning slot
   /// @param raffleId The auction id
@@ -159,11 +159,6 @@ interface IUniversalRaffle {
       external
       view
       returns (UniversalRaffleCore.DepositedNFT[] memory);
-
-  /// @notice Gets slot winner for particular auction
-  /// @param raffleId The raffle id
-  /// @param slotIndex The slot index
-  function getSlotWinner(uint256 raffleId, uint256 slotIndex) external view returns (address);
 
   /// @notice Gets slot info for particular auction
   /// @param raffleId The raffle id
