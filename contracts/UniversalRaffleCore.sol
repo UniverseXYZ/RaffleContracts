@@ -486,7 +486,7 @@ library UniversalRaffleCore {
 
         for (uint256 i = 1; i <= raffleInfo.totalSlots;) {
             for (uint256 j = 1; j <= raffle.slots[i].depositedNFTCounter;) {
-                UniversalRaffleCore.DepositedNFT memory nft = raffle.slots[i].depositedNFTs[j];
+                UniversalRaffleCore.DepositedNFT storage nft = raffle.slots[i].depositedNFTs[j];
 
                 if (nft.hasSecondarySaleFees) {
                     LibPart.Part[] memory fees = ds.royaltiesRegistry.getRoyalties(
