@@ -260,11 +260,12 @@ library UniversalRaffleCore {
 
         uint256 checkSum = 0;
         delete ds.raffleConfigs[raffleId].paymentSplits;
-        for (uint256 k = 0; k < config.paymentSplits.length; k += 1) {
+        for (uint256 k; k < config.paymentSplits.length;) {
             require(config.paymentSplits[k].recipient != address(0), "Recipient should be present");
             require(config.paymentSplits[k].value != 0, "Fee value should be positive");
             checkSum += config.paymentSplits[k].value;
             ds.raffleConfigs[raffleId].paymentSplits.push(config.paymentSplits[k]);
+            unchecked { k++; }
         }
         require(checkSum < 10000, "E15");
 
@@ -275,8 +276,9 @@ library UniversalRaffleCore {
         Storage storage ds = raffleStorage();
         Raffle storage raffle = ds.raffles[raffleId];
 
-        for (uint32 i = 0; i < allowList.length; i++) {
+        for (uint256 i; i < allowList.length;) {
             raffle.depositors[allowList[i].participant] = allowList[i].allocation == 1 ? true : false;
+            unchecked { i++; }
         }
     }
 
@@ -285,8 +287,9 @@ library UniversalRaffleCore {
         Raffle storage raffle = ds.raffles[raffleId];
 
         require(allowList.length <= 1000, 'Max 1000 per');
-        for (uint32 i = 0; i < allowList.length; i++) {
+        for (uint256 i; i < allowList.length;) {
             raffle.allowList[allowList[i].participant] = allowList[i].allocation;
+            unchecked { i++; }
         }
     }
 
@@ -315,13 +318,14 @@ library UniversalRaffleCore {
         if (slotIndex > 1) require(raffle.slots[slotIndex - 1].depositedNFTCounter > 0, "E39");
 
         uint256[] memory nftSlotIndexes = new uint256[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; i += 1) {
+        for (uint256 i; i < tokens.length;) {
             nftSlotIndexes[i] = _depositERC721(
                 raffleId,
                 slotIndex,
                 tokens[i].tokenId,
                 tokens[i].tokenAddress
             );
+            unchecked { i++; }
         }
 
         return nftSlotIndexes;
@@ -374,12 +378,13 @@ library UniversalRaffleCore {
         require(raffleId > 0 && raffleId <= ds.totalRaffles, "E01");
         require(ds.raffles[raffleId].isCanceled, "E05");
 
-        for (uint256 i = 0; i < slotNftIndexes.length; i++) {
+        for (uint256 i; i < slotNftIndexes.length;) {
             _withdrawDepositedERC721(
                 raffleId,
                 slotNftIndexes[i][0],
                 slotNftIndexes[i][1]
             );
+            unchecked { i++; }
         }
     }
 
@@ -441,7 +446,7 @@ library UniversalRaffleCore {
 
         emit LogERC721RewardsClaim(msg.sender, raffleId, slotIndex);
 
-        for (uint256 i = totalWithdrawn; i < amount + totalWithdrawn; i += 1) {
+        for (uint256 i = totalWithdrawn; i < amount + totalWithdrawn;) {
             DepositedNFT memory nftForWithdrawal = winningSlot.depositedNFTs[i + 1];
 
             raffle.withdrawnNFTCounter = raffle.withdrawnNFTCounter + 1;
@@ -456,6 +461,8 @@ library UniversalRaffleCore {
                     nftForWithdrawal.tokenId
                 );
             }
+
+            unchecked { i++; }
         }
     }
 
@@ -486,8 +493,8 @@ library UniversalRaffleCore {
         uint256 averageERC721SalePrice = raffleTotalRevenue / raffle.depositedNFTCounter;
         uint256 totalRoyaltyFees = 0;
 
-        for (uint256 i = 1; i <= raffleInfo.totalSlots; i++) {
-            for (uint256 j = 1; j <= raffle.slots[i].depositedNFTCounter; j++) {
+        for (uint256 i = 1; i <= raffleInfo.totalSlots;) {
+            for (uint256 j = 1; j <= raffle.slots[i].depositedNFTCounter;) {
                 UniversalRaffleCore.DepositedNFT memory nft = raffle.slots[i].depositedNFTs[j];
 
                 if (nft.hasSecondarySaleFees) {
@@ -497,16 +504,19 @@ library UniversalRaffleCore {
                     );
                     uint256 value = averageERC721SalePrice;
 
-                    for (uint256 k = 0; k < fees.length && k < 5; k++) {
+                    for (uint256 k; k < fees.length && k < 5;) {
                         uint256 fee = (averageERC721SalePrice * fees[k].value) / 10000;
 
                         if (value > fee) {
                             value = value.sub(fee);
                             totalRoyaltyFees = totalRoyaltyFees.add(fee);
                         }
+                        unchecked { k++; }
                     }
                 }
+                unchecked { j++; }
             }
+            unchecked { i++; }
         }
 
         // NFT Royalties Split
@@ -519,9 +529,10 @@ library UniversalRaffleCore {
         uint256 splitValue = 0;
         uint256 rafflerRevenue = raffleTotalRevenue.sub(totalRoyaltyFees).sub(daoRoyalty);
 
-        for (uint256 i = 0; i < raffleInfo.paymentSplits.length && i < 5; i += 1) {
+        for (uint256 i; i < raffleInfo.paymentSplits.length && i < 5;) {
             uint256 fee = (rafflerRevenue * raffleInfo.paymentSplits[i].value) / 10000;
             splitValue = splitValue.add(fee);
+            unchecked { i++; }
         }
 
         // Revenue Split
@@ -581,8 +592,9 @@ library UniversalRaffleCore {
 
         DepositedNFT[] memory nfts = new DepositedNFT[](nftsInSlot);
 
-        for (uint256 i = 0; i < nftsInSlot; i += 1) {
+        for (uint256 i; i < nftsInSlot;) {
             nfts[i] = ds.raffles[raffleId].slots[slotIndex].depositedNFTs[i + 1];
+            unchecked { i++; }
         }
         return nfts;
     }

@@ -51,8 +51,9 @@ contract UniversalRaffle is
         ds.royaltiesRegistry = _royaltiesRegistry;
         ds.daoAddress = payable(msg.sender);
         ds.daoInitialized = false;
-        for (uint256 i = 0; i < _supportedERC20Tokens.length; i++) {
+        for (uint256 i; i < _supportedERC20Tokens.length;) {
             ds.supportedERC20Tokens[_supportedERC20Tokens[i]] = true;
+            unchecked { i++; }
         }
 
         ds.raffleTicketAddress = _raffleTicketAddress;
@@ -121,9 +122,10 @@ contract UniversalRaffle is
             "E16"
         );
 
-        for (uint256 i = 0; i < slotIndices.length; i += 1) {
+        for (uint256 i; i < slotIndices.length;) {
             require(tokens[i].length <= 5, "E17");
             UniversalRaffleCore.depositERC721(raffleId, slotIndices[i], tokens[i]);
+            unchecked { i++; }
         }
     }
 
@@ -196,9 +198,10 @@ contract UniversalRaffle is
     function setWinners(uint256 raffleId, uint256[] memory winnerIds, address[] memory winners) external {
         UniversalRaffleCore.Storage storage ds = UniversalRaffleCore.raffleStorage();
         require(msg.sender == ds.vrfAddress, "No permission");
-        for (uint32 i = 1; i <= winners.length; i++) {
+        for (uint256 i = 1; i <= winners.length;) {
             ds.raffles[raffleId].slots[i].winnerId = winnerIds[i - 1];
             ds.raffles[raffleId].slots[i].winner = winners[i - 1];
+            unchecked { i++; }
         }
 
         ds.raffles[raffleId].isFinalized = true;
@@ -224,10 +227,11 @@ contract UniversalRaffle is
         ) = getRaffleData(raffleId);
 
         require(raffle.isCanceled, "E04");
-        for (uint256 i = 0; i < tokenIds.length; i++) {
+        for (uint256 i; i < tokenIds.length;) {
             require(IERC721(ds.raffleTicketAddress).ownerOf(tokenIds[i]) == msg.sender);
             require(!raffle.refunds[tokenIds[i]], "Refund already issued");
             raffle.refunds[tokenIds[i]] = true;
+            unchecked { i++; }
         }
 
         uint256 amount = raffleInfo.ticketPrice.mul(tokenIds.length);
@@ -265,11 +269,12 @@ contract UniversalRaffle is
         emit UniversalRaffleCore.LogRaffleRevenueWithdrawal(raffleInfo.raffler, raffleId, remainder);
 
         // Distribute the payment splits to the respective recipients
-        for (uint256 i = 0; i < raffleInfo.paymentSplits.length && i < 5; i += 1) {
+        for (uint256 i; i < raffleInfo.paymentSplits.length && i < 5;) {
             uint256 fee = (remainder * raffleInfo.paymentSplits[i].value) / 10000;
             value -= fee;
             paymentSplitsPaid += fee;
             sendPayments(raffleInfo.ERC20PurchaseToken, fee, raffleInfo.paymentSplits[i].recipient);
+            unchecked { i++; }
         }
 
         // Distribute the remaining revenue to the raffler
@@ -298,12 +303,13 @@ contract UniversalRaffle is
         LibPart.Part[] memory fees = ds.royaltiesRegistry.getRoyalties(nft.tokenAddress, nft.tokenId);
         nft.feesPaid = true;
 
-        for (uint256 i = 0; i < fees.length && i < 5; i += 1) {
+        for (uint256 i; i < fees.length && i < 5;) {
             uint256 value = (averageERC721SalePrice * fees[i].value) / 10000;
             if (ds.rafflesRoyaltyPool[raffleId] >= value) {
                 ds.rafflesRoyaltyPool[raffleId] = ds.rafflesRoyaltyPool[raffleId].sub(value);
                 sendPayments(raffleInfo.ERC20PurchaseToken, value, fees[i].account);
             }
+            unchecked { i++; }
         }
     }
 
