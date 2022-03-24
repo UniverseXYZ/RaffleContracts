@@ -77,21 +77,21 @@ contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
     function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
         uint256 raffleId = vrfToRaffleId[requestId];
 
-        UniversalRaffleCore.RaffleConfig memory raffle = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId);
-        UniversalRaffleCore.RaffleState memory raffleState = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
+        uint256 totalSlots = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId).totalSlots;
+        uint256 ticketCounter = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId).ticketCounter;
 
-        require (!raffleState.isFinalized, 'Already finalized');
+        require (!IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId).isFinalized, 'Already finalized');
 
-        uint256[] memory winnerIds = new uint256[](raffle.totalSlots);
-        address[] memory winners = new address[](raffle.totalSlots);
-        for (uint32 i = 0; i < raffle.totalSlots; i++) {
-          uint256 winnerId = (raffleId * 10000000) + (randomWords[i] % raffleState.ticketCounter) + 1;
+        uint256[] memory winnerIds = new uint256[](totalSlots);
+        address[] memory winners = new address[](totalSlots);
+        for (uint32 i = 0; i < totalSlots; i++) {
+          uint256 winnerId = (raffleId * 10000000) + (randomWords[i] % ticketCounter) + 1;
 
           bool stored = false;
           while (!stored) {
             for (uint32 j = 0; j < winnerIds.length; j++) {
               if (winnerIds[j] == winnerId) {
-                if (((randomWords[i] % raffleState.ticketCounter) + j + 1) == raffleState.ticketCounter) {
+                if (((randomWords[i] % ticketCounter) + j + 1) == ticketCounter) {
                   winnerId = (raffleId * 10000000) + 1;
                 } else winnerId++;
               } else {
@@ -109,25 +109,25 @@ contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
 
     // Used for testing purposes only
     function getWinnersMock(uint256 raffleId) external override onlyRaffleContract() {
-        UniversalRaffleCore.RaffleConfig memory raffle = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId);
-        UniversalRaffleCore.RaffleState memory raffleState = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
+        uint256 totalSlots = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId).totalSlots;
+        uint256 ticketCounter = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId).ticketCounter;
 
-        uint256[] memory randomWords = new uint256[](raffle.totalSlots);
-        for (uint256 i = 0; i < raffle.totalSlots; i++) {
+        uint256[] memory randomWords = new uint256[](totalSlots);
+        for (uint256 i = 0; i < totalSlots; i++) {
             uint256 randomNumber = uint256(keccak256(abi.encodePacked(block.difficulty, block.timestamp, raffleId + i)));
             randomWords[i] = randomNumber;
         }
 
-        uint256[] memory winnerIds = new uint256[](raffle.totalSlots);
-        address[] memory winners = new address[](raffle.totalSlots);
-        for (uint32 i = 0; i < raffle.totalSlots; i++) {
-          uint256 winnerId = (raffleId * 10000000) + (randomWords[i] % raffleState.ticketCounter) + 1;
+        uint256[] memory winnerIds = new uint256[](totalSlots);
+        address[] memory winners = new address[](totalSlots);
+        for (uint32 i = 0; i < totalSlots; i++) {
+          uint256 winnerId = (raffleId * 10000000) + (randomWords[i] % ticketCounter) + 1;
 
           bool stored = false;
           while (!stored) {
             for (uint32 j = 0; j < winnerIds.length; j++) {
               if (winnerIds[j] == winnerId) {
-                if (((randomWords[i] % raffleState.ticketCounter) + j + 1) == raffleState.ticketCounter) {
+                if (((randomWords[i] % ticketCounter) + j + 1) == ticketCounter) {
                   winnerId = (raffleId * 10000000) + 1;
                 } else winnerId++;
               } else {
