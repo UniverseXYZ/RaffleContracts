@@ -187,7 +187,7 @@ contract UniversalRaffle is
                 block.timestamp > raffleInfo.endTime && !raffle.isFinalized, "E01");
 
         if (raffle.ticketCounter < raffleInfo.minTicketCount) {
-            UniversalRaffleCore.refundRaffle(raffleId);
+            ds.raffles[raffleId].isCanceled = true;
         } else {
             if (ds.unsafeRandomNumber) IRandomNumberGenerator(ds.vrfAddress).getWinnersMock(raffleId); // Testing purposes only
             else IRandomNumberGenerator(ds.vrfAddress).getWinners(raffleId, keyHash, subscriptionId, minConf, callbackGas);

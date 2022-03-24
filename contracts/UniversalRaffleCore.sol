@@ -465,19 +465,13 @@ library UniversalRaffleCore {
 
     function cancelRaffle(uint256 raffleId) external onlyRaffleSetupOwner(raffleId) {
         Storage storage ds = raffleStorage();
-        ds.raffles[raffleId].isCanceled = true;
-
-        emit LogRaffleCanceled(raffleId);
-    }
-
-    function refundRaffle(uint256 raffleId) external {
-        Storage storage ds = raffleStorage();
 
         require(raffleId > 0 && raffleId <= ds.totalRaffles, "E01");
-        require(ds.raffleConfigs[raffleId].startTime < block.timestamp, "E03");
+        require(ds.raffleConfigs[raffleId].startTime > block.timestamp, "E03");
         require(!ds.raffles[raffleId].isCanceled, "E04");
 
         ds.raffles[raffleId].isCanceled = true;
+
         emit LogRaffleCanceled(raffleId);
     }
 
