@@ -310,7 +310,7 @@ library UniversalRaffleCore {
 
         require(
             (msg.sender == raffleConfig.raffler || raffle.depositors[msg.sender]) &&
-            raffleConfig.totalSlots >= slotIndex && slotIndex >= 0 && (tokens.length <= 40) &&
+            raffleConfig.totalSlots >= slotIndex && slotIndex > 0 && (tokens.length <= 40) &&
             (raffle.slots[slotIndex].depositedNFTCounter + tokens.length <= ds.nftSlotLimit)
         , "E36");
 
