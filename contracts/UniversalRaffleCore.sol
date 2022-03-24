@@ -131,6 +131,7 @@ library UniversalRaffleCore {
         mapping(uint256 => RaffleConfig) raffleConfigs;
         mapping(uint256 => Raffle) raffles;
         mapping(uint256 => uint256) raffleRevenue;
+        mapping(uint256 => uint256) rafflesDAOPool;
         mapping(uint256 => uint256) rafflesRoyaltyPool;
         mapping(address => uint256) royaltiesReserve;
     }
@@ -553,6 +554,7 @@ library UniversalRaffleCore {
 
         // DAO Royalties Split
         uint256 daoRoyalty = raffleTotalRevenue.sub(totalRoyaltyFees).mul(ds.royaltyFeeBps).div(10000);
+        ds.rafflesDAOPool[raffleId] = daoRoyalty;
         ds.royaltiesReserve[raffleInfo.ERC20PurchaseToken] = ds.royaltiesReserve[raffleInfo.ERC20PurchaseToken].add(daoRoyalty);
 
         uint256 splitValue = 0;

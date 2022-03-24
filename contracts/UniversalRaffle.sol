@@ -229,8 +229,7 @@ contract UniversalRaffle is
 
         uint256 raffleRevenue = ds.raffleRevenue[raffleId];
         uint256 raffleTotalRevenue = raffleInfo.ticketPrice * raffle.ticketCounter;
-        uint256 daoRoyalty = raffleTotalRevenue.sub(ds.rafflesRoyaltyPool[raffleId]).mul(ds.royaltyFeeBps).div(10000);
-        uint256 remainder = raffleTotalRevenue.sub(ds.rafflesRoyaltyPool[raffleId]).sub(daoRoyalty);
+        uint256 remainder = raffleTotalRevenue.sub(ds.rafflesRoyaltyPool[raffleId]).sub(ds.rafflesDAOPool[raffleId]);
 
         require(raffleId > 0 && raffleId <= ds.totalRaffles && raffle.isFinalized && raffleRevenue > 0, "E30");
 
