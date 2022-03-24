@@ -144,26 +144,26 @@ library UniversalRaffleCore {
 
 
     event LogERC721Deposit(
-        address depositor,
+        address indexed depositor,
         address tokenAddress,
         uint256 tokenId,
-        uint256 raffleId,
+        uint256 indexed raffleId,
         uint256 slotIndex,
         uint256 nftSlotIndex
     );
 
     event LogERC721Withdrawal(
-        address depositor,
+        address indexed depositor,
         address tokenAddress,
         uint256 tokenId,
-        uint256 raffleId,
+        uint256 indexed raffleId,
         uint256 slotIndex,
         uint256 nftSlotIndex
     );
 
     event LogRaffleCreated(
-        uint256 raffleId,
-        address raffleOwner,
+        uint256 indexed raffleId,
+        address indexed raffleOwner,
         uint256 numberOfSlots,
         uint256 startTime,
         uint256 endTime,
@@ -171,7 +171,7 @@ library UniversalRaffleCore {
     );
 
     event LogBidMatched(
-        uint256 raffleId,
+        uint256 indexed raffleId,
         uint256 slotIndex,
         uint256 slotReservePrice,
         uint256 winningBidAmount,
@@ -179,27 +179,27 @@ library UniversalRaffleCore {
     );
 
     event LogSlotRevenueCaptured(
-        uint256 raffleId,
+        uint256 indexed raffleId,
         uint256 slotIndex,
         uint256 amount,
         address ERC20PurchaseToken
     );
 
-    event LogBidSubmitted(address sender, uint256 raffleId, uint256 currentBid, uint256 totalBid);
+    event LogBidSubmitted(address indexed sender, uint256 indexed raffleId, uint256 currentBid, uint256 totalBid);
 
-    event LogBidWithdrawal(address recipient, uint256 raffleId, uint256 amount);
+    event LogBidWithdrawal(address indexed recipient, uint256 indexed raffleId, uint256 amount);
 
-    event LogRaffleExtended(uint256 raffleId, uint256 endTime);
+    event LogRaffleExtended(uint256 indexed raffleId, uint256 endTime);
 
-    event LogRaffleCanceled(uint256 raffleId);
+    event LogRaffleCanceled(uint256 indexed raffleId);
 
-    event LogRaffleRevenueWithdrawal(address recipient, uint256 raffleId, uint256 amount);
+    event LogRaffleRevenueWithdrawal(address indexed recipient, uint256 indexed raffleId, uint256 amount);
 
-    event LogERC721RewardsClaim(address claimer, uint256 raffleId, uint256 slotIndex);
+    event LogERC721RewardsClaim(address indexed claimer, uint256 indexed raffleId, uint256 slotIndex);
 
     event LogRoyaltiesWithdrawal(uint256 amount, address to, address token);
 
-    event LogRaffleFinalized(uint256 raffleId);
+    event LogRaffleFinalized(uint256 indexed raffleId);
 
     modifier onlyRaffleSetupOwner(uint256 raffleId) {
         Storage storage ds = raffleStorage();
