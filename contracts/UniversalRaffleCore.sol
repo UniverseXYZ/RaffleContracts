@@ -246,14 +246,6 @@ library UniversalRaffleCore {
             ds.totalRaffles = ds.totalRaffles + 1;
             raffleId = ds.totalRaffles;
 
-            // Can only be initialized and not reconfigurable
-            ds.raffles[raffleId].ticketCounter = 0;
-            ds.raffles[raffleId].depositedNFTCounter = 0;
-            ds.raffles[raffleId].withdrawnNFTCounter = 0;
-            ds.raffles[raffleId].useAllowList = false;
-            ds.raffles[raffleId].isCanceled = false;
-            ds.raffles[raffleId].isFinalized = false;
-
             ds.raffleConfigs[raffleId].raffler = msg.sender;
             ds.raffleConfigs[raffleId].totalSlots = config.totalSlots;
         }
