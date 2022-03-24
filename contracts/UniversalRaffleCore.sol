@@ -453,13 +453,11 @@ library UniversalRaffleCore {
         for (uint256 i = totalWithdrawn; i < amount + totalWithdrawn;) {
             DepositedNFT memory nftForWithdrawal = winningSlot.depositedNFTs[i + 1];
 
-            if (nftForWithdrawal.tokenId != 0) {
-                IERC721(nftForWithdrawal.tokenAddress).safeTransferFrom(
-                    address(this),
-                    msg.sender,
-                    nftForWithdrawal.tokenId
-                );
-            }
+            IERC721(nftForWithdrawal.tokenAddress).safeTransferFrom(
+                address(this),
+                msg.sender,
+                nftForWithdrawal.tokenId
+            );
 
             unchecked { i++; }
         }
