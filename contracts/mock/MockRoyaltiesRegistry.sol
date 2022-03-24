@@ -2,6 +2,7 @@
 pragma solidity 0.8.11;
 
 import "../interfaces/IRoyaltiesProvider.sol";
+import "../interfaces/IRoyaltiesProviderExternal.sol";
 import "../HasSecondarySaleFees.sol";
 import "../ERC2981Royalties.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
@@ -59,21 +60,28 @@ contract MockRoyaltiesRegistry is IRoyaltiesProvider, OwnableUpgradeable {
         }
     }
 
-    function getRoyalties(address token, uint tokenId) override external returns (LibPart.Part[] memory) {
-        RoyaltiesSet memory royaltiesSet = royaltiesByTokenAndTokenId[keccak256(abi.encode(token, tokenId))];
-        if (royaltiesSet.initialized) {
-            return royaltiesSet.royalties;
+    function getRoyalties(address token, uint tokenId) override external returns (LibPart.Part[] memory nftRoyalties, LibPart.Part[] memory collectionRoyalties) {
+        RoyaltiesSet memory royaltiesSetCollection = royaltiesByToken[token];
+        RoyaltiesSet memory royaltiesSetNFT = royaltiesByTokenAndTokenId[keccak256(abi.encode(token, tokenId))];
+
+        if (royaltiesSetCollection.initialized) {
+            collectionRoyalties = royaltiesSetCollection.royalties;
         }
-        royaltiesSet = royaltiesByToken[token];
-        if (royaltiesSet.initialized) {
-            return royaltiesSet.royalties;
+
+        if (royaltiesSetNFT.initialized) {
+            nftRoyalties = royaltiesSetNFT.royalties;
+            return (nftRoyalties, collectionRoyalties);
         }
+
         (bool result, LibPart.Part[] memory resultRoyalties) = providerExtractor(token, tokenId);
         if (result == false) {
             resultRoyalties = royaltiesFromContract(token, tokenId);
         }
         setRoyaltiesCacheByTokenAndTokenId(token, tokenId, resultRoyalties);
-        return resultRoyalties;
+
+        nftRoyalties = resultRoyalties;
+
+        return (nftRoyalties, collectionRoyalties);
     }
 
     function setRoyaltiesCacheByTokenAndTokenId(address token, uint tokenId, LibPart.Part[] memory royalties) internal {
@@ -95,14 +103,14 @@ contract MockRoyaltiesRegistry is IRoyaltiesProvider, OwnableUpgradeable {
         if (IERC165Upgradeable(token).supportsInterface(_INTERFACE_ID_FEES)) {
             HasSecondarySaleFees hasFees = HasSecondarySaleFees(token);
             address payable[] memory recipients;
-            try hasFees.getFeeRecipients(tokenId) returns (address payable[] memory result) {
-                recipients = result;
+            try hasFees.getFeeRecipients(tokenId) returns (address payable[] memory recipientsResult) {
+                recipients = recipientsResult;
             } catch {
                 return new LibPart.Part[](0);
             }
             uint[] memory values;
-            try hasFees.getFeeBps(tokenId) returns (uint[] memory result) {
-                values = result;
+            try hasFees.getFeeBps(tokenId) returns (uint[] memory feesResult) {
+                values = feesResult;
             } catch {
                 return new LibPart.Part[](0);
             }
@@ -130,6 +138,10 @@ contract MockRoyaltiesRegistry is IRoyaltiesProvider, OwnableUpgradeable {
                 return new LibPart.Part[](0);
             }
 
+            if (royaltyRecipient == payable(address(0))) {
+                return new LibPart.Part[](0);
+            }
+
             // ERC2981 Supports only one royalty recipient
             LibPart.Part[] memory result = new LibPart.Part[](1);
             result[0].value = royaltyValue;
@@ -144,7 +156,7 @@ contract MockRoyaltiesRegistry is IRoyaltiesProvider, OwnableUpgradeable {
         result = false;
         address providerAddress = royaltiesProviders[token];
         if (providerAddress != address(0x0)) {
-            IRoyaltiesProvider provider = IRoyaltiesProvider(providerAddress);
+            IRoyaltiesProviderExternal provider = IRoyaltiesProviderExternal(providerAddress);
             try provider.getRoyalties(token, tokenId) returns (LibPart.Part[] memory royaltiesByProvider) {
                 royalties = royaltiesByProvider;
                 result = true;
@@ -152,5 +164,14 @@ contract MockRoyaltiesRegistry is IRoyaltiesProvider, OwnableUpgradeable {
         }
     }
 
-    uint256[46] private __gap;
+    function readCollectionRoyalties(address token) external view returns (LibPart.Part[] memory collectionRoyalties) {
+        RoyaltiesSet memory royaltiesSetCollection = royaltiesByToken[token];
+
+        if (royaltiesSetCollection.initialized) {
+            collectionRoyalties = royaltiesSetCollection.royalties;
+        }
+
+        return collectionRoyalties;
+    }
+
 }

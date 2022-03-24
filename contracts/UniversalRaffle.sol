@@ -300,7 +300,7 @@ contract UniversalRaffle is
 
         uint256 averageERC721SalePrice = raffleInfo.ticketPrice * raffle.ticketCounter / raffle.depositedNFTCounter;
 
-        LibPart.Part[] memory fees = ds.royaltiesRegistry.getRoyalties(nft.tokenAddress, nft.tokenId);
+        (LibPart.Part[] memory fees,) = ds.royaltiesRegistry.getRoyalties(nft.tokenAddress, nft.tokenId);
         nft.feesPaid = true;
 
         for (uint256 i; i < fees.length && i < 5;) {

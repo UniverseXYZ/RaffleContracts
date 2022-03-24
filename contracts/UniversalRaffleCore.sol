@@ -351,11 +351,13 @@ library UniversalRaffleCore {
     ) internal returns (uint256) {
         Storage storage ds = raffleStorage();
 
+        (LibPart.Part[] memory nftRoyalties,) = ds.royaltiesRegistry.getRoyalties(tokenAddress, tokenId);
+
         DepositedNFT memory item = DepositedNFT({
             tokenId: tokenId,
             tokenAddress: tokenAddress,
             depositor: msg.sender,
-            hasSecondarySaleFees: ds.royaltiesRegistry.getRoyalties(tokenAddress, tokenId).length > 0,
+            hasSecondarySaleFees: nftRoyalties.length > 0,
             feesPaid: false
         });
 
@@ -489,7 +491,7 @@ library UniversalRaffleCore {
                 UniversalRaffleCore.DepositedNFT storage nft = raffle.slots[i].depositedNFTs[j];
 
                 if (nft.hasSecondarySaleFees) {
-                    LibPart.Part[] memory fees = ds.royaltiesRegistry.getRoyalties(
+                    (LibPart.Part[] memory fees,) = ds.royaltiesRegistry.getRoyalties(
                         nft.tokenAddress,
                         nft.tokenId
                     );
