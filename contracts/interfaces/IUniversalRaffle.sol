@@ -69,7 +69,7 @@ interface IUniversalRaffle {
 
   /// @notice Select winners of raffle
   /// @param raffleId The raffle id
-  function finalizeRaffle(uint256 raffleId) external;
+  function finalizeRaffle(uint256 raffleId, bytes32 keyHash, uint64 subscriptionId, uint16 minConf, uint32 callbackGas) external;
 
   /// @notice Select winners of raffle
   /// @param raffleId The raffle id

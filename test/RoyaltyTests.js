@@ -212,8 +212,8 @@ describe("Raffle Royalty Tests", async function () {
     await ethers.provider.send('evm_setNextBlockTimestamp', [endTime]);
     await ethers.provider.send('evm_mine');
 
-    await UniversalRaffle.finalizeRaffle(raffleId);
-    await expect(UniversalRaffle.finalizeRaffle(raffleId)).to.be.reverted;
+    await UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0);
+    await expect(UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0)).to.be.reverted;
 
     const rafflerBalance = await ethers.provider.getBalance(addr1.address);
     await UniversalRaffle.connect(addr2).distributeCapturedRaffleRevenue(raffleId);
@@ -246,8 +246,8 @@ describe("Raffle Royalty Tests", async function () {
     await ethers.provider.send('evm_setNextBlockTimestamp', [endTime]);
     await ethers.provider.send('evm_mine');
 
-    await UniversalRaffle.finalizeRaffle(raffleId);
-    await expect(UniversalRaffle.finalizeRaffle(raffleId)).to.be.reverted;
+    await UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0);
+    await expect(UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0)).to.be.reverted;
 
     const rafflerBalance = await mockToken.balanceOf(addr1.address);
     await UniversalRaffle.connect(addr2).distributeCapturedRaffleRevenue(raffleId);
@@ -280,8 +280,8 @@ describe("Raffle Royalty Tests", async function () {
     await ethers.provider.send('evm_setNextBlockTimestamp', [endTime]);
     await ethers.provider.send('evm_mine');
 
-    await UniversalRaffle.finalizeRaffle(raffleId);
-    await expect(UniversalRaffle.finalizeRaffle(raffleId)).to.be.reverted;
+    await UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0);
+    await expect(UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0)).to.be.reverted;
 
     const rafflerBalance = await ethers.provider.getBalance(addr1.address);
     await UniversalRaffle.connect(addr2).distributeCapturedRaffleRevenue(raffleId);
@@ -326,8 +326,8 @@ describe("Raffle Royalty Tests", async function () {
     await ethers.provider.send('evm_setNextBlockTimestamp', [endTime]);
     await ethers.provider.send('evm_mine');
 
-    await UniversalRaffle.finalizeRaffle(raffleId);
-    await expect(UniversalRaffle.finalizeRaffle(raffleId)).to.be.reverted;
+    await UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0);
+    await expect(UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0)).to.be.reverted;
 
     const rafflerBalance = await mockToken.balanceOf(addr1.address);
     await UniversalRaffle.connect(addr2).distributeCapturedRaffleRevenue(raffleId);
@@ -373,8 +373,8 @@ describe("Raffle Royalty Tests", async function () {
     await ethers.provider.send('evm_setNextBlockTimestamp', [endTime]);
     await ethers.provider.send('evm_mine');
 
-    await UniversalRaffle.finalizeRaffle(raffleId);
-    await expect(UniversalRaffle.finalizeRaffle(raffleId)).to.be.reverted;
+    await UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0);
+    await expect(UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0)).to.be.reverted;
 
     const rafflerBalance = await mockToken.balanceOf(addr1.address);
     await UniversalRaffle.connect(addr2).distributeCapturedRaffleRevenue(raffleId);

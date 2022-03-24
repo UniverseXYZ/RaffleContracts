@@ -16,6 +16,7 @@ import "./interfaces/IUniversalRaffle.sol";
 import "./interfaces/IRoyaltiesProvider.sol";
 import "./lib/LibPart.sol";
 import "./UniversalRaffleCore.sol";
+import "hardhat/console.sol";
 
 /* TODO: 
  * Consumer is not decentralized and can halt raffle contracts
@@ -172,7 +173,7 @@ contract UniversalRaffle is
         IRaffleTickets(ds.raffleTicketAddress).mint(msg.sender, amount, raffleId);
     }
 
-    function finalizeRaffle(uint256 raffleId) external override nonReentrant {
+    function finalizeRaffle(uint256 raffleId, bytes32 keyHash, uint64 subscriptionId, uint16 minConf, uint32 callbackGas) external override nonReentrant {
         (
             UniversalRaffleCore.Storage storage ds,
             UniversalRaffleCore.RaffleConfig storage raffleInfo,
@@ -187,7 +188,7 @@ contract UniversalRaffle is
             UniversalRaffleCore.refundRaffle(raffleId);
         } else {
             if (ds.unsafeRandomNumber) IRandomNumberGenerator(ds.vrfAddress).getWinnersMock(raffleId); // Testing purposes only
-            else IRandomNumberGenerator(ds.vrfAddress).getWinners(raffleId);
+            else IRandomNumberGenerator(ds.vrfAddress).getWinners(raffleId, keyHash, subscriptionId, minConf, callbackGas);
             UniversalRaffleCore.calculatePaymentSplits(raffleId);
         }
     }

@@ -17,7 +17,7 @@ async function main() {
   const TEST_VRF = false;
   const zeroAddress = '0x0000000000000000000000000000000000000000';
   const startTime = currentTime + 600; // 10 mins
-  const endTime = currentTime + 1200; // 20 mins
+  const endTime = currentTime + 900; // 15 mins
   const maxTicketCount = 1000;
   const minTicketCount = 10;
   const tokenPrice = ethers.utils.parseEther("0.0007");

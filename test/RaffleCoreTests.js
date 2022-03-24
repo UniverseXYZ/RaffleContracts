@@ -391,7 +391,7 @@ describe("Raffle Core Tests", async function () {
     await ethers.provider.send('evm_setNextBlockTimestamp', [closeTime]);
     await ethers.provider.send('evm_mine');
 
-    await UniversalRaffle.finalizeRaffle(raffleId);
+    await UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0);
 
     let config = await UniversalRaffle.getRaffleState(raffleId);
     expect(config[4]).to.equal(true);
@@ -475,8 +475,8 @@ describe("Raffle Core Tests", async function () {
     await ethers.provider.send('evm_setNextBlockTimestamp', [endTime]);
     await ethers.provider.send('evm_mine');
 
-    await UniversalRaffle.finalizeRaffle(raffleId);
-    await expect(UniversalRaffle.finalizeRaffle(raffleId)).to.be.reverted;
+    await UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0);
+    await expect(UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0)).to.be.reverted;
 
     let i = 1;
     for (let i = 1; i <= 10; i++) {
@@ -515,8 +515,8 @@ describe("Raffle Core Tests", async function () {
     await ethers.provider.send('evm_setNextBlockTimestamp', [endTime]);
     await ethers.provider.send('evm_mine');
 
-    await UniversalRaffle.finalizeRaffle(raffleId);
-    await expect(UniversalRaffle.finalizeRaffle(raffleId)).to.be.reverted;
+    await UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0);
+    await expect(UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0)).to.be.reverted;
 
     let i = 1;
     for (let i = 1; i <= 10; i++) {
