@@ -6,7 +6,7 @@
 pragma solidity 0.8.11;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -16,7 +16,6 @@ import "./interfaces/IUniversalRaffle.sol";
 import "./interfaces/IRoyaltiesProvider.sol";
 import "./lib/LibPart.sol";
 import "./UniversalRaffleCore.sol";
-import "hardhat/console.sol";
 
 /* TODO: 
  * Consumer is not decentralized and can halt raffle contracts
@@ -130,13 +129,7 @@ contract UniversalRaffle is
             UniversalRaffleCore.Raffle storage raffle
         ) = getRaffleData(raffleId);
 
-        require(raffleId > 0 && raffleId <= ds.totalRaffles, "E01");
-        require(
-            !raffle.isCanceled &&
-            raffleInfo.startTime < block.timestamp && 
-            block.timestamp < raffleInfo.endTime &&
-            raffle.depositedNFTCounter > 0, "Unavailable");
-        require(amount > 0 && amount <= ds.maxBulkPurchaseCount, "Wrong amount");
+        UniversalRaffleCore.buyRaffleTicketsChecks(raffleId, amount);
 
         if (raffle.useAllowList) {
             require(raffle.allowList[msg.sender] >= amount);
@@ -151,8 +144,7 @@ contract UniversalRaffle is
                 require(returnExcessStatus, "Failed to return excess");
             }
         } else {
-            IERC20 paymentToken = IERC20(raffleInfo.ERC20PurchaseToken);
-            require(paymentToken.transferFrom(msg.sender, address(this), amount.mul(raffleInfo.ticketPrice)), "TX FAILED");
+            SafeERC20.safeTransferFrom(IERC20(raffleInfo.ERC20PurchaseToken), msg.sender, address(this), amount.mul(raffleInfo.ticketPrice));
         }
 
         raffle.ticketCounter += amount;
@@ -170,9 +162,8 @@ contract UniversalRaffle is
                 !raffle.isCanceled &&
                 block.timestamp > raffleInfo.endTime && !raffle.isFinalized, "E01");
 
-        if (raffle.ticketCounter < raffleInfo.minTicketCount) {
-            ds.raffles[raffleId].isCanceled = true;
-        } else {
+        if (raffle.ticketCounter < raffleInfo.minTicketCount) ds.raffles[raffleId].isCanceled = true;
+        else {
             if (ds.unsafeRandomNumber) IRandomNumberGenerator(ds.vrfAddress).getWinnersMock(raffleId); // Testing purposes only
             else IRandomNumberGenerator(ds.vrfAddress).getWinners(raffleId, keyHash, subscriptionId, minConf, callbackGas);
             UniversalRaffleCore.calculatePaymentSplits(raffleId);
@@ -212,8 +203,7 @@ contract UniversalRaffle is
 
         require(raffle.isCanceled, "E04");
         for (uint256 i; i < tokenIds.length;) {
-            require(IERC721(ds.raffleTicketAddress).ownerOf(tokenIds[i]) == msg.sender);
-            require(!raffle.refunds[tokenIds[i]], "Refund already issued");
+            require(IERC721(ds.raffleTicketAddress).ownerOf(tokenIds[i]) == msg.sender && !raffle.refunds[tokenIds[i]], "Refund already issued");
             raffle.refunds[tokenIds[i]] = true;
             unchecked { i++; }
         }
@@ -237,13 +227,12 @@ contract UniversalRaffle is
             UniversalRaffleCore.Raffle storage raffle
         ) = getRaffleData(raffleId);
 
-        require(raffleId > 0 && raffleId <= ds.totalRaffles && raffle.isFinalized, "E01");
-
         uint256 raffleRevenue = ds.raffleRevenue[raffleId];
         uint256 raffleTotalRevenue = raffleInfo.ticketPrice * raffle.ticketCounter;
         uint256 daoRoyalty = raffleTotalRevenue.sub(ds.rafflesRoyaltyPool[raffleId]).mul(ds.royaltyFeeBps).div(10000);
         uint256 remainder = raffleTotalRevenue.sub(ds.rafflesRoyaltyPool[raffleId]).sub(daoRoyalty);
-        require(raffleRevenue > 0, "E30");
+
+        require(raffleId > 0 && raffleId <= ds.totalRaffles && raffle.isFinalized && raffleRevenue > 0, "E30");
 
         ds.raffleRevenue[raffleId] = 0;
 
@@ -316,8 +305,7 @@ contract UniversalRaffle is
         }
 
         if (tokenAddress != address(0) && value > 0) {
-            IERC20 token = IERC20(tokenAddress);
-            require(token.transfer(address(to), value), "TX FAILED");
+            SafeERC20.safeTransfer(IERC20(tokenAddress), address(to), value);
         }
     }
 

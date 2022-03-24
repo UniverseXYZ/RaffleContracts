@@ -203,18 +203,20 @@ library UniversalRaffleCore {
 
     modifier onlyRaffleSetupOwner(uint256 raffleId) {
         Storage storage ds = raffleStorage();
-        require(raffleId > 0 && raffleId <= ds.totalRaffles, "E01");
-        require(ds.raffleConfigs[raffleId].startTime > block.timestamp, "E03");
-        require(!ds.raffles[raffleId].isCanceled, "E04");
-        require(ds.raffleConfigs[raffleId].raffler == msg.sender, "E06");
+        require(raffleId > 0 &&
+                raffleId <= ds.totalRaffles &&
+                ds.raffleConfigs[raffleId].startTime > block.timestamp &&
+                !ds.raffles[raffleId].isCanceled &&
+                ds.raffleConfigs[raffleId].raffler == msg.sender, "E01");
         _;
     }
 
     modifier onlyRaffleSetup(uint256 raffleId) {
         Storage storage ds = raffleStorage();
-        require(raffleId > 0 && raffleId <= ds.totalRaffles, "E01");
-        require(ds.raffleConfigs[raffleId].startTime > block.timestamp, "E03");
-        require(!ds.raffles[raffleId].isCanceled, "E04");
+        require(raffleId > 0 &&
+                raffleId <= ds.totalRaffles &&
+                ds.raffleConfigs[raffleId].startTime > block.timestamp &&
+                !ds.raffles[raffleId].isCanceled, "E01");
         _;
     }
 
@@ -406,8 +408,7 @@ library UniversalRaffleCore {
         Storage storage ds = raffleStorage();
         Raffle storage raffle = ds.raffles[raffleId];
 
-        require(raffleId > 0 && raffleId <= ds.totalRaffles, "E01");
-        require(ds.raffles[raffleId].isCanceled, "E05");
+        require(raffleId > 0 && raffleId <= ds.totalRaffles && ds.raffles[raffleId].isCanceled, "E01");
 
         raffle.withdrawnNFTCounter += slotNftIndexes.length;
         raffle.depositedNFTCounter -= slotNftIndexes.length;
@@ -451,6 +452,20 @@ library UniversalRaffleCore {
         );
     }
 
+    function buyRaffleTicketsChecks(uint256 raffleId, uint256 amount) external {
+        Storage storage ds = raffleStorage();
+        RaffleConfig storage raffleInfo = ds.raffleConfigs[raffleId];
+        Raffle storage raffle = ds.raffles[raffleId];
+
+        require(
+            raffleId > 0 && raffleId <= ds.totalRaffles &&
+            !raffle.isCanceled &&
+            raffleInfo.startTime < block.timestamp && 
+            block.timestamp < raffleInfo.endTime &&
+            raffle.depositedNFTCounter > 0 &&
+            amount > 0 && amount <= ds.maxBulkPurchaseCount, "Unavailable");
+    }
+
     function claimERC721Rewards(
         uint256 raffleId,
         uint256 slotIndex,
@@ -464,11 +479,10 @@ library UniversalRaffleCore {
         uint256 totalDeposited = winningSlot.depositedNFTCounter;
         uint256 totalWithdrawn = winningSlot.withdrawnNFTCounter;
 
-        require(raffle.isFinalized, "E24");
-        require(winningSlot.winner == msg.sender, "E31");
-
-        require(amount <= 40, "E25");
-        require(amount <= totalDeposited - totalWithdrawn, "E33");
+        require(raffle.isFinalized &&
+                winningSlot.winner == msg.sender &&
+                amount <= 40 &&
+                amount <= totalDeposited - totalWithdrawn, "E24");
 
         emit LogERC721RewardsClaim(msg.sender, raffleId, slotIndex);
 
@@ -490,9 +504,9 @@ library UniversalRaffleCore {
     function cancelRaffle(uint256 raffleId) external onlyRaffleSetupOwner(raffleId) {
         Storage storage ds = raffleStorage();
 
-        require(raffleId > 0 && raffleId <= ds.totalRaffles, "E01");
-        require(ds.raffleConfigs[raffleId].startTime > block.timestamp, "E03");
-        require(!ds.raffles[raffleId].isCanceled, "E04");
+        require(raffleId > 0 && raffleId <= ds.totalRaffles &&
+                ds.raffleConfigs[raffleId].startTime > block.timestamp &&
+                !ds.raffles[raffleId].isCanceled, "E01");
 
         ds.raffles[raffleId].isCanceled = true;
 
