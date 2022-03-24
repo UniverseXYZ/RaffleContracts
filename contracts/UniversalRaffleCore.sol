@@ -317,11 +317,17 @@ library UniversalRaffleCore {
         // Ensure previous slot has depoited NFTs, so there is no case where there is an empty slot between non-empty slots
         if (slotIndex > 1) require(raffle.slots[slotIndex - 1].depositedNFTCounter > 0, "E39");
 
+        uint256 nftSlotIndex = raffle.slots[slotIndex].depositedNFTCounter;
+        raffle.slots[slotIndex].depositedNFTCounter += tokens.length;
+        raffle.depositedNFTCounter += tokens.length;
         uint256[] memory nftSlotIndexes = new uint256[](tokens.length);
         for (uint256 i; i < tokens.length;) {
-            nftSlotIndexes[i] = _depositERC721(
+            nftSlotIndex++;
+            nftSlotIndexes[i] = nftSlotIndex;
+            _depositERC721(
                 raffleId,
                 slotIndex,
+                nftSlotIndex,
                 tokens[i].tokenId,
                 tokens[i].tokenAddress
             );
@@ -334,12 +340,11 @@ library UniversalRaffleCore {
     function _depositERC721(
         uint256 raffleId,
         uint256 slotIndex,
+        uint256 nftSlotIndex,
         uint256 tokenId,
         address tokenAddress
     ) internal returns (uint256) {
         Storage storage ds = raffleStorage();
-        Raffle storage raffle = ds.raffles[raffleId];
-        Slot storage slot = raffle.slots[slotIndex];
 
         DepositedNFT memory item = DepositedNFT({
             tokenId: tokenId,
@@ -351,11 +356,7 @@ library UniversalRaffleCore {
 
         IERC721(tokenAddress).safeTransferFrom(msg.sender, address(this), tokenId);
 
-        uint256 nftSlotIndex = slot.depositedNFTCounter + 1;
-
-        slot.depositedNFTs[nftSlotIndex] = item;
-        slot.depositedNFTCounter = nftSlotIndex;
-        raffle.depositedNFTCounter = raffle.depositedNFTCounter + 1;
+        ds.raffles[raffleId].slots[slotIndex].depositedNFTs[nftSlotIndex] = item;
 
         emit LogERC721Deposit(
             msg.sender,
@@ -374,11 +375,15 @@ library UniversalRaffleCore {
         uint256[][] calldata slotNftIndexes
     ) external {
         Storage storage ds = raffleStorage();
+        Raffle storage raffle = ds.raffles[raffleId];
 
         require(raffleId > 0 && raffleId <= ds.totalRaffles, "E01");
         require(ds.raffles[raffleId].isCanceled, "E05");
 
+        raffle.withdrawnNFTCounter += slotNftIndexes.length;
+        raffle.depositedNFTCounter -= slotNftIndexes.length;
         for (uint256 i; i < slotNftIndexes.length;) {
+            ds.raffles[raffleId].slots[slotNftIndexes[i][0]].withdrawnNFTCounter += 1;
             _withdrawDepositedERC721(
                 raffleId,
                 slotNftIndexes[i][0],
@@ -394,20 +399,12 @@ library UniversalRaffleCore {
         uint256 nftSlotIndex
     ) internal {
         Storage storage ds = raffleStorage();
-        Raffle storage raffle = ds.raffles[raffleId];
-        Slot storage slot = raffle.slots[slotIndex];
-
-        DepositedNFT memory nftForWithdrawal = slot.depositedNFTs[
+        DepositedNFT memory nftForWithdrawal = ds.raffles[raffleId].slots[slotIndex].depositedNFTs[
             nftSlotIndex
         ];
 
         require(msg.sender == nftForWithdrawal.depositor, "E41");
-
-        delete slot.depositedNFTs[nftSlotIndex];
-
-        raffle.withdrawnNFTCounter = raffle.withdrawnNFTCounter + 1;
-        raffle.depositedNFTCounter = raffle.depositedNFTCounter - 1;
-        slot.withdrawnNFTCounter = slot.withdrawnNFTCounter + 1;
+        delete ds.raffles[raffleId].slots[slotIndex].depositedNFTs[nftSlotIndex];
 
         emit LogERC721Withdrawal(
             msg.sender,
@@ -446,13 +443,10 @@ library UniversalRaffleCore {
 
         emit LogERC721RewardsClaim(msg.sender, raffleId, slotIndex);
 
+        raffle.withdrawnNFTCounter += amount;
+        raffle.slots[slotIndex].withdrawnNFTCounter = winningSlot.withdrawnNFTCounter += amount;
         for (uint256 i = totalWithdrawn; i < amount + totalWithdrawn;) {
             DepositedNFT memory nftForWithdrawal = winningSlot.depositedNFTs[i + 1];
-
-            raffle.withdrawnNFTCounter = raffle.withdrawnNFTCounter + 1;
-            raffle.slots[slotIndex].withdrawnNFTCounter =
-                winningSlot.withdrawnNFTCounter +
-                1;
 
             if (nftForWithdrawal.tokenId != 0) {
                 IERC721(nftForWithdrawal.tokenAddress).safeTransferFrom(

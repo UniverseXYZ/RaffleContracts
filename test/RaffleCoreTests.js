@@ -366,7 +366,9 @@ describe("Raffle Core Tests", async function () {
 
     await expect(UniversalRaffle.connect(addr1).withdrawDepositedERC721(raffleId, 1, 2)).to.be.reverted;
 
-    for (let i = 1; i <= 10; i++) await UniversalRaffle.connect(addr2).withdrawDepositedERC721(raffleId, [[i, 2]]);
+    let nfts = [];
+    for (let i = 1; i <= 10; i++) nfts.push([i, 2]);
+    await UniversalRaffle.connect(addr2).withdrawDepositedERC721(raffleId, nfts);
 
     const config = await UniversalRaffle.getRaffleState(raffleId);
     expect(config[2]).to.equal(20);
