@@ -319,11 +319,7 @@ contract UniversalRaffle is
         return UniversalRaffleCore.setSupportedERC20Tokens(erc20token, value);
     }
 
-    function getRaffleConfig(uint256 raffleId) external view override returns (UniversalRaffleCore.RaffleConfig memory) {
-        return UniversalRaffleCore.getRaffleConfig(raffleId);
-    }
-
-    function getRaffleState(uint256 raffleId) external view override returns (UniversalRaffleCore.RaffleState memory) {
+    function getRaffleState(uint256 raffleId) external view override returns (UniversalRaffleCore.RaffleConfig memory, UniversalRaffleCore.RaffleState memory) {
         return UniversalRaffleCore.getRaffleState(raffleId);
     }
 

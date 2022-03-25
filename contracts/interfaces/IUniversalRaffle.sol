@@ -130,19 +130,12 @@ interface IUniversalRaffle {
   /// @param value True or false
   function setSupportedERC20Tokens(address erc20token, bool value) external returns (address, bool);
 
-  /// @notice Gets raffle information
-  /// @param raffleId The raffle id
-  function getRaffleConfig(uint256 raffleId)
-      external
-      view
-      returns (UniversalRaffleCore.RaffleConfig memory);
-
   /// @notice Gets raffle state
   /// @param raffleId The raffle id
   function getRaffleState(uint256 raffleId)
       external
       view
-      returns (UniversalRaffleCore.RaffleState memory);
+      returns (UniversalRaffleCore.RaffleConfig memory, UniversalRaffleCore.RaffleState memory);
 
   /// @notice Gets allow list
   /// @param raffleId The raffle id

@@ -235,23 +235,17 @@ library UniversalRaffleCore {
 
         require(
             currentTime < config.startTime &&
-            config.startTime < config.endTime,
-            "Wrong time configuration"
+            config.startTime < config.endTime &&
+            config.totalSlots > 0 && config.totalSlots <= ds.maxNumberOfSlotsPerRaffle &&
+            config.ERC20PurchaseToken == address(0) || ds.supportedERC20Tokens[config.ERC20PurchaseToken] &&
+            config.minTicketCount > 1 && config.maxTicketCount >= config.minTicketCount,
+            "Wrong configuration"
         );
-
-        require(
-            config.totalSlots > 0 && config.totalSlots <= ds.maxNumberOfSlotsPerRaffle,
-            "Slots are out of bounds"
-        );
-
-        require(config.ERC20PurchaseToken == address(0) || ds.supportedERC20Tokens[config.ERC20PurchaseToken], "The ERC20 token is not supported");
-        require(config.minTicketCount > 1 && config.maxTicketCount >= config.minTicketCount, "Ticket count err");
 
         uint256 raffleId;
         if (existingRaffleId > 0) {
             raffleId = existingRaffleId;
-            require(ds.raffleConfigs[raffleId].raffler == msg.sender, "No permission");
-            require(ds.raffleConfigs[raffleId].startTime > currentTime, "Raffle already started");
+            require(ds.raffleConfigs[raffleId].raffler == msg.sender && ds.raffleConfigs[raffleId].startTime > currentTime, "No permission");
         } else {
             ds.totalRaffles = ds.totalRaffles + 1;
             raffleId = ds.totalRaffles;
@@ -271,8 +265,7 @@ library UniversalRaffleCore {
         uint256 checkSum = 0;
         delete ds.raffleConfigs[raffleId].paymentSplits;
         for (uint256 k; k < config.paymentSplits.length;) {
-            require(config.paymentSplits[k].recipient != address(0), "Recipient should be present");
-            require(config.paymentSplits[k].value != 0, "Fee value should be positive");
+            require(config.paymentSplits[k].recipient != address(0) && config.paymentSplits[k].value != 0, "Bad data");
             checkSum += config.paymentSplits[k].value;
             ds.raffleConfigs[raffleId].paymentSplits.push(config.paymentSplits[k]);
             unchecked { k++; }
@@ -382,11 +375,11 @@ library UniversalRaffleCore {
 
         address[] memory feesAddress = new address[](nftRoyalties.length);
         uint96[] memory feesValue = new uint96[](nftRoyalties.length);
-        // for (uint256 i; i < nftRoyalties.length && i < 5;) {
-        //     feesAddress[i] = nftRoyalties[i].account;
-        //     feesValue[i] = nftRoyalties[i].value;
-        //     unchecked { i++; }
-        // }
+        for (uint256 i; i < nftRoyalties.length && i < 5;) {
+            feesAddress[i] = nftRoyalties[i].account;
+            feesValue[i] = nftRoyalties[i].value;
+            unchecked { i++; }
+        }
 
         IERC721(tokenAddress).safeTransferFrom(msg.sender, address(this), tokenId);
 
@@ -536,14 +529,11 @@ library UniversalRaffleCore {
         for (uint256 i = 1; i <= raffleInfo.totalSlots;) {
             for (uint256 j = 1; j <= raffle.slots[i].depositedNFTCounter;) {
                 UniversalRaffleCore.DepositedNFT storage nft = raffle.slots[i].depositedNFTs[j];
-                (LibPart.Part[] memory nftRoyalties,) = ds.royaltiesRegistry.getRoyalties(nft.tokenAddress, nft.tokenId);
 
                 if (nft.hasSecondarySaleFees) {
                     uint256 value = averageERC721SalePrice;
 
                     for (uint256 k; k < nft.feesAddress.length && k < 5;) {
-                        nft.feesAddress[k] = nftRoyalties[k].account;
-                        nft.feesValue[k] = nftRoyalties[k].value;
                         uint256 fee = (averageERC721SalePrice * nft.feesValue[k]) / 10000;
 
                         if (value > fee) {
@@ -602,15 +592,10 @@ library UniversalRaffleCore {
         return (erc20token, value);
     }
 
-    function getRaffleConfig(uint256 raffleId) external view returns (RaffleConfig memory) {
-        Storage storage ds = raffleStorage();
-        return ds.raffleConfigs[raffleId];
-    }
-
-    function getRaffleState(uint256 raffleId) external view returns (RaffleState memory)
+    function getRaffleState(uint256 raffleId) external view returns (RaffleConfig memory, RaffleState memory)
     {
         Storage storage ds = raffleStorage();
-        return RaffleState(
+        return (ds.raffleConfigs[raffleId], RaffleState(
             ds.raffles[raffleId].ticketCounter,
             ds.raffles[raffleId].depositedNFTCounter,
             ds.raffles[raffleId].withdrawnNFTCounter,
@@ -618,7 +603,7 @@ library UniversalRaffleCore {
             ds.raffles[raffleId].isCanceled,
             ds.raffles[raffleId].isFinalized,
             ds.raffles[raffleId].revenuePaid
-        );
+        ));
     }
 
     function getAllowList(uint256 raffleId, address participant) external view returns (uint256) {

@@ -213,7 +213,7 @@ describe("Raffle Core Tests", async function () {
     const [owner, addr1] = await ethers.getSigners();
     const { UniversalRaffle } = await loadFixture(launchRaffles);
 
-    const raffleInfo = await UniversalRaffle.getRaffleConfig(1);
+    const raffleInfo = (await UniversalRaffle.getRaffleState(1))[0];
     expect(raffleInfo[0]).to.equal(addr1.address);
     expect(raffleInfo[1]).to.equal(zeroAddress);
     expect(raffleInfo[2].toNumber()).to.equal(startTime);
@@ -230,7 +230,7 @@ describe("Raffle Core Tests", async function () {
     const [owner, addr1] = await ethers.getSigners();
     const { UniversalRaffle } = await loadFixture(launchRaffles);
 
-    const raffleInfo = await UniversalRaffle.getRaffleConfig(1);
+    const raffleInfo = (await UniversalRaffle.getRaffleState(1))[0];
     expect(raffleInfo[0]).to.equal(addr1.address);
     expect(raffleInfo[1]).to.equal(zeroAddress);
     expect(raffleInfo[2].toNumber()).to.equal(startTime);
@@ -263,7 +263,6 @@ describe("Raffle Core Tests", async function () {
     expect(await RaffleTickets.ownerOf(tokenId)).to.equal(owner.address);
     expect(await RaffleTickets.balanceOf(owner.address)).to.equal(20);
     const tokenURI = await RaffleTickets.tokenURI(tokenId);
-    console.log(tokenURI);
   })
 
   it('should purchase ETH raffle tickets', async () => {
@@ -291,8 +290,6 @@ describe("Raffle Core Tests", async function () {
     const [owner, addr1] = await ethers.getSigners();
     const { UniversalRaffle, RaffleTickets } = await loadFixture(raffleWithNFTs);
     const raffleId = 1;
-
-    let config = await UniversalRaffle.getRaffleConfig(raffleId);
 
     await expect(UniversalRaffle.reconfigureRaffle([
       owner.address,
@@ -324,7 +321,7 @@ describe("Raffle Core Tests", async function () {
       raffleId
     )
 
-    config = await UniversalRaffle.getRaffleConfig(raffleId);
+    config = (await UniversalRaffle.getRaffleState(raffleId))[0];
     expect(config[0]).to.equal(addr1.address);
     expect(config[1]).to.equal(purchaseToken);
     expect(config[2]).to.equal(startTime + 1000);
@@ -351,7 +348,7 @@ describe("Raffle Core Tests", async function () {
 
     for (let i = 1; i <= 10; i++) await UniversalRaffle.connect(addr1).withdrawDepositedERC721(raffleId, [[i, 1]]);
 
-    const config = await UniversalRaffle.getRaffleState(raffleId);
+    const config = (await UniversalRaffle.getRaffleState(raffleId))[1];
     expect(config[2]).to.equal(10);
   })
 
@@ -370,7 +367,7 @@ describe("Raffle Core Tests", async function () {
     for (let i = 1; i <= 10; i++) nfts.push([i, 2]);
     await UniversalRaffle.connect(addr2).withdrawDepositedERC721(raffleId, nfts);
 
-    const config = await UniversalRaffle.getRaffleState(raffleId);
+    const config = (await UniversalRaffle.getRaffleState(raffleId))[1];
     expect(config[2]).to.equal(20);
   })
 
@@ -395,7 +392,7 @@ describe("Raffle Core Tests", async function () {
 
     await UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0);
 
-    let config = await UniversalRaffle.getRaffleState(raffleId);
+    let config = (await UniversalRaffle.getRaffleState(raffleId))[1];
     expect(config[4]).to.equal(true);
 
     let contractBalancePre = await mockToken.balanceOf(UniversalRaffle.address);
@@ -429,10 +426,10 @@ describe("Raffle Core Tests", async function () {
     const raffleId = 1;
 
     await UniversalRaffle.connect(addr1).toggleAllowList(raffleId);
-    let config = await UniversalRaffle.getRaffleState(raffleId);
+    let config = (await UniversalRaffle.getRaffleState(raffleId))[1];
     expect(config[3]).to.equal(true);
     await UniversalRaffle.connect(addr1).toggleAllowList(raffleId);
-    config = await UniversalRaffle.getRaffleState(raffleId);
+    config = (await UniversalRaffle.getRaffleState(raffleId))[1];
     expect(config[3]).to.equal(false);
     await UniversalRaffle.connect(addr1).toggleAllowList(raffleId);
 
@@ -492,7 +489,7 @@ describe("Raffle Core Tests", async function () {
       expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(slot[3]);
     }
 
-    let config = await UniversalRaffle.getRaffleState(raffleId);
+    let config = (await UniversalRaffle.getRaffleState(raffleId))[1];
     expect(config[1]).to.equal(11);
     expect(config[2]).to.equal(11);
     expect(config[5]).to.equal(true);
@@ -523,14 +520,13 @@ describe("Raffle Core Tests", async function () {
     let i = 1;
     for (let i = 1; i <= 10; i++) {
       const slot = await UniversalRaffle.getSlotInfo(raffleId, i);
-      console.log(slot);
       const depositedNFTs = await UniversalRaffle.getDepositedNftsInSlot(raffleId, i);
       expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(UniversalRaffle.address);
       await UniversalRaffle.connect(await findSigner(slot[3])).claimERC721Rewards(raffleId, i, 2);
       expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(slot[3]);
     }
 
-    let config = await UniversalRaffle.getRaffleState(raffleId);
+    let config = (await UniversalRaffle.getRaffleState(raffleId))[1];
     expect(config[1]).to.equal(20);
     expect(config[2]).to.equal(20);
     expect(config[5]).to.equal(true);

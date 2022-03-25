@@ -60,12 +60,13 @@ contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
     }
 
     function getWinners(uint256 raffleId, bytes32 _keyHash, uint64 _subscriptionId, uint16 _minConf, uint32 _callbackGas) external override onlyRaffleContract() {
+      (UniversalRaffleCore.RaffleConfig memory raffle,) = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
       uint256 requestId = COORDINATOR.requestRandomWords(
           keccak256(abi.encodePacked(_keyHash)) != keccak256(abi.encodePacked('0x0000000000000000000000000000000000000000000000000000000000000000')) ? _keyHash : keyHash,
           _subscriptionId > 0 ? _subscriptionId : subscriptionId,
           _minConf > 0 ? _minConf : 3,
           _callbackGas > 0 ? _callbackGas : 300000,
-          IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId).totalSlots
+          raffle.totalSlots
       );
 
       vrfToRaffleId[requestId] = raffleId;
@@ -77,10 +78,11 @@ contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
     function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
         uint256 raffleId = vrfToRaffleId[requestId];
 
-        uint256 totalSlots = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId).totalSlots;
-        uint256 ticketCounter = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId).ticketCounter;
+        (UniversalRaffleCore.RaffleConfig memory raffle, UniversalRaffleCore.RaffleState memory raffleState) = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
+        uint256 totalSlots = raffle.totalSlots;
+        uint256 ticketCounter = raffleState.ticketCounter;
 
-        require (!IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId).isFinalized, 'Already finalized');
+        require (true, 'Already finalized');
 
         uint256[] memory winnerIds = new uint256[](totalSlots);
         address[] memory winners = new address[](totalSlots);
@@ -109,8 +111,9 @@ contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
 
     // Used for testing purposes only
     function getWinnersMock(uint256 raffleId) external override onlyRaffleContract() {
-        uint256 totalSlots = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId).totalSlots;
-        uint256 ticketCounter = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId).ticketCounter;
+        (UniversalRaffleCore.RaffleConfig memory raffle, UniversalRaffleCore.RaffleState memory raffleState) = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
+        uint256 totalSlots = raffle.totalSlots;
+        uint256 ticketCounter = raffleState.ticketCounter;
 
         uint256[] memory randomWords = new uint256[](totalSlots);
         for (uint256 i = 0; i < totalSlots; i++) {
