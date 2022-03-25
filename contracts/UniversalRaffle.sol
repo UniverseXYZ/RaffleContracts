@@ -272,14 +272,13 @@ contract UniversalRaffle is
 
         uint256 averageERC721SalePrice = raffleInfo.ticketPrice * raffle.ticketCounter / raffle.depositedNFTCounter;
 
-        (LibPart.Part[] memory fees,) = ds.royaltiesRegistry.getRoyalties(nft.tokenAddress, nft.tokenId);
         nft.feesPaid = true;
 
-        for (uint256 i; i < fees.length && i < 5;) {
-            uint256 value = (averageERC721SalePrice * fees[i].value) / 10000;
+        for (uint256 i; i < nft.feesAddress.length && i < 5;) {
+            uint256 value = (averageERC721SalePrice * nft.feesValue[i]) / 10000;
             if (ds.rafflesRoyaltyPool[raffleId] >= value) {
                 ds.rafflesRoyaltyPool[raffleId] = ds.rafflesRoyaltyPool[raffleId].sub(value);
-                sendPayments(raffleInfo.ERC20PurchaseToken, value, fees[i].account);
+                sendPayments(raffleInfo.ERC20PurchaseToken, value, nft.feesAddress[i]);
             }
             unchecked { i++; }
         }

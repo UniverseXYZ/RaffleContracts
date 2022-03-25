@@ -85,6 +85,8 @@ library UniversalRaffleCore {
         address depositor;
         bool hasSecondarySaleFees;
         bool feesPaid;
+        address[] feesAddress;
+        uint96[] feesValue;
     }
 
     struct PaymentSplit {
@@ -378,17 +380,25 @@ library UniversalRaffleCore {
 
         (LibPart.Part[] memory nftRoyalties,) = ds.royaltiesRegistry.getRoyalties(tokenAddress, tokenId);
 
-        DepositedNFT memory item = DepositedNFT({
+        address[] memory feesAddress = new address[](nftRoyalties.length);
+        uint96[] memory feesValue = new uint96[](nftRoyalties.length);
+        // for (uint256 i; i < nftRoyalties.length && i < 5;) {
+        //     feesAddress[i] = nftRoyalties[i].account;
+        //     feesValue[i] = nftRoyalties[i].value;
+        //     unchecked { i++; }
+        // }
+
+        IERC721(tokenAddress).safeTransferFrom(msg.sender, address(this), tokenId);
+
+        ds.raffles[raffleId].slots[slotIndex].depositedNFTs[nftSlotIndex] = DepositedNFT({
             tokenId: tokenId,
             tokenAddress: tokenAddress,
             depositor: msg.sender,
             hasSecondarySaleFees: nftRoyalties.length > 0,
-            feesPaid: false
+            feesPaid: false,
+            feesAddress: feesAddress,
+            feesValue: feesValue
         });
-
-        IERC721(tokenAddress).safeTransferFrom(msg.sender, address(this), tokenId);
-
-        ds.raffles[raffleId].slots[slotIndex].depositedNFTs[nftSlotIndex] = item;
 
         emit LogERC721Deposit(
             msg.sender,
@@ -526,16 +536,15 @@ library UniversalRaffleCore {
         for (uint256 i = 1; i <= raffleInfo.totalSlots;) {
             for (uint256 j = 1; j <= raffle.slots[i].depositedNFTCounter;) {
                 UniversalRaffleCore.DepositedNFT storage nft = raffle.slots[i].depositedNFTs[j];
+                (LibPart.Part[] memory nftRoyalties,) = ds.royaltiesRegistry.getRoyalties(nft.tokenAddress, nft.tokenId);
 
                 if (nft.hasSecondarySaleFees) {
-                    (LibPart.Part[] memory fees,) = ds.royaltiesRegistry.getRoyalties(
-                        nft.tokenAddress,
-                        nft.tokenId
-                    );
                     uint256 value = averageERC721SalePrice;
 
-                    for (uint256 k; k < fees.length && k < 5;) {
-                        uint256 fee = (averageERC721SalePrice * fees[k].value) / 10000;
+                    for (uint256 k; k < nft.feesAddress.length && k < 5;) {
+                        nft.feesAddress[k] = nftRoyalties[k].account;
+                        nft.feesValue[k] = nftRoyalties[k].value;
+                        uint256 fee = (averageERC721SalePrice * nft.feesValue[k]) / 10000;
 
                         if (value > fee) {
                             value = value.sub(fee);
