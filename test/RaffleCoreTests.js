@@ -40,6 +40,7 @@ describe("Raffle Core Tests", async function () {
   const tokenPrice = ethers.utils.parseEther("3.0");
   const totalSlots = 10;
   const raffleName = 'illestrater\'s Raffle';
+  const raffleImage = 'https://i.ibb.co/SdN2kw3/ill.png';
   const paymentSplits = [];
 
   const TEST_VRF = true;
@@ -119,6 +120,7 @@ describe("Raffle Core Tests", async function () {
       tokenPrice,
       totalSlots,
       raffleName,
+      raffleImage,
       paymentSplits,
     ]);
 
@@ -132,6 +134,7 @@ describe("Raffle Core Tests", async function () {
       tokenPrice,
       totalSlots,
       raffleName,
+      raffleImage,
       paymentSplits,
     ]);
 
@@ -145,6 +148,7 @@ describe("Raffle Core Tests", async function () {
       tokenPrice,
       totalSlots,
       raffleName,
+      raffleImage,
       paymentSplits,
     ]);
 
@@ -223,7 +227,8 @@ describe("Raffle Core Tests", async function () {
     expect(raffleInfo[6].toString()).to.equal(tokenPrice.toString());
     expect(raffleInfo[7]).to.equal(totalSlots)
     expect(raffleInfo[8]).to.equal(raffleName);
-    expect(JSON.stringify(raffleInfo[9])).to.equal(JSON.stringify(paymentSplits));
+    expect(raffleInfo[9]).to.equal(raffleImage);
+    expect(JSON.stringify(raffleInfo[10])).to.equal(JSON.stringify(paymentSplits));
   })
 
   it('should create ETH raffle', async () => {
@@ -240,7 +245,8 @@ describe("Raffle Core Tests", async function () {
     expect(raffleInfo[6].toString()).to.equal(tokenPrice.toString());
     expect(raffleInfo[7]).to.equal(totalSlots);
     expect(raffleInfo[8]).to.equal(raffleName);
-    expect(JSON.stringify(raffleInfo[9])).to.equal(JSON.stringify(paymentSplits));
+    expect(raffleInfo[9]).to.equal(raffleImage);
+    expect(JSON.stringify(raffleInfo[10])).to.equal(JSON.stringify(paymentSplits));
   })
 
   it('should purchase ERC20 raffle tickets', async () => {
@@ -263,6 +269,7 @@ describe("Raffle Core Tests", async function () {
     expect(await RaffleTickets.ownerOf(tokenId)).to.equal(owner.address);
     expect(await RaffleTickets.balanceOf(owner.address)).to.equal(20);
     const tokenURI = await RaffleTickets.tokenURI(tokenId);
+    // console.log(tokenURI);
   })
 
   it('should purchase ETH raffle tickets', async () => {
@@ -301,6 +308,7 @@ describe("Raffle Core Tests", async function () {
       tokenPrice.div(3),
       1,
       'Raffle Raffle Raffle',
+      'https://yooo.com/lol.png',
       [[randomWallet1.address, 1000], [randomWallet2.address, 500]]
     ],
       raffleId
@@ -316,6 +324,7 @@ describe("Raffle Core Tests", async function () {
       tokenPrice.div(3),
       1,
       'Raffle Raffle Raffle',
+      'https://yooo.com/lol.png',
       [[randomWallet1.address, 1000], [randomWallet2.address, 500]]
     ],
       raffleId
@@ -331,10 +340,11 @@ describe("Raffle Core Tests", async function () {
     expect(config[6]).to.equal(tokenPrice.div(3));
     expect(config[7]).to.equal(totalSlots);
     expect(config[8]).to.equal('Raffle Raffle Raffle');
-    expect(config[9][0][0]).to.equal(randomWallet1.address);
-    expect(config[9][0][1]).to.equal(1000);
-    expect(config[9][1][0]).to.equal(randomWallet2.address);
-    expect(config[9][1][1]).to.equal(500);
+    expect(config[9]).to.equal('https://yooo.com/lol.png');
+    expect(config[10][0][0]).to.equal(randomWallet1.address);
+    expect(config[10][0][1]).to.equal(1000);
+    expect(config[10][1][0]).to.equal(randomWallet2.address);
+    expect(config[10][1][1]).to.equal(500);
   })
 
   it('should cancel raffle', async () => {

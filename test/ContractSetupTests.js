@@ -18,6 +18,8 @@ describe("Raffle Setup Security", async function () {
   const minTicketCount = 100;
   const tokenPrice = ethers.utils.parseEther("3.0");
   const totalSlots = 10;
+  const raffleName = 'illestrater\'s Raffle';
+  const raffleImage = 'https://i.ibb.co/SdN2kw3/ill.png';
   const paymentSplits = [];
 
   const TEST_VRF = true;
@@ -96,7 +98,8 @@ describe("Raffle Setup Security", async function () {
       minTicketCount,
       tokenPrice,
       totalSlots,
-      'Raffle Raffle Raffle',
+      raffleName,
+      raffleImage,
       paymentSplits,
     ]);
 
@@ -109,7 +112,8 @@ describe("Raffle Setup Security", async function () {
       minTicketCount,
       tokenPrice,
       totalSlots,
-      'Raffle Raffle Raffle',
+      raffleName,
+      raffleImage,
       paymentSplits,
     ]);
 

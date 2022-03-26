@@ -166,6 +166,7 @@ contract UniversalRaffle is
         else {
             if (ds.unsafeRandomNumber) IRandomNumberGenerator(ds.vrfAddress).getWinnersMock(raffleId); // Testing purposes only
             else IRandomNumberGenerator(ds.vrfAddress).getWinners(raffleId, keyHash, subscriptionId, minConf, callbackGas);
+            // IRandomNumberGenerator(ds.vrfAddress).getWinners(raffleId, keyHash, subscriptionId, minConf, callbackGas);
             UniversalRaffleCore.calculatePaymentSplits(raffleId);
         }
     }
@@ -228,13 +229,11 @@ contract UniversalRaffle is
         ) = getRaffleData(raffleId);
 
         uint256 raffleRevenue = ds.raffleRevenue[raffleId];
-        uint256 raffleTotalRevenue = raffleInfo.ticketPrice * raffle.ticketCounter;
-        uint256 remainder = raffleTotalRevenue.sub(ds.rafflesRoyaltyPool[raffleId]).sub(ds.rafflesDAOPool[raffleId]);
-
         require(raffleId > 0 && raffleId <= ds.totalRaffles && raffle.isFinalized && raffleRevenue > 0, "E30");
 
         ds.raffleRevenue[raffleId] = 0;
 
+        uint256 remainder = (raffleInfo.ticketPrice * raffle.ticketCounter).sub(ds.rafflesRoyaltyPool[raffleId]).sub(ds.rafflesDAOPool[raffleId]);
         uint256 value = remainder;
         uint256 paymentSplitsPaid;
 

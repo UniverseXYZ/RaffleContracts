@@ -38,6 +38,8 @@ describe("Raffle Royalty Tests", async function () {
   const tokenPrice = ethers.utils.parseEther("3.0");
   const totalSlots = 10;
   const emptySplits = []
+  const raffleName = 'illestrater\'s Raffle';
+  const raffleImage = 'https://i.ibb.co/SdN2kw3/ill.png';
   const paymentSplits = [[randomWallet3.address, 1000], [randomWallet4.address, 500]];
 
   const TEST_VRF = true;
@@ -121,7 +123,8 @@ describe("Raffle Royalty Tests", async function () {
       minTicketCount,
       tokenPrice,
       totalSlots,
-      'Raffle Raffle Raffle',
+      raffleName,
+      raffleImage,
       emptySplits,
     ]);
 
@@ -134,7 +137,8 @@ describe("Raffle Royalty Tests", async function () {
       minTicketCount,
       tokenPrice,
       totalSlots,
-      'Raffle Raffle Raffle',
+      raffleName,
+      raffleImage,
       emptySplits,
     ]);
 
@@ -147,7 +151,8 @@ describe("Raffle Royalty Tests", async function () {
       minTicketCount,
       tokenPrice,
       totalSlots,
-      'Raffle Raffle Raffle',
+      raffleName,
+      raffleImage,
       paymentSplits,
     ]);
 
