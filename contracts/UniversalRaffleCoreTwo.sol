@@ -27,11 +27,10 @@ library UniversalRaffleCoreTwo {
 
     modifier onlyRaffleSetupOwner(uint256 raffleId) {
         UniversalRaffleSchema.Storage storage ds = raffleStorage();
-        require(raffleId > 0 &&
-                raffleId <= ds.totalRaffles &&
-                ds.raffleConfigs[raffleId].startTime > block.timestamp &&
-                !ds.raffles[raffleId].isCanceled &&
-                ds.raffleConfigs[raffleId].raffler == msg.sender, "E01");
+        require(raffleId > 0 && raffleId <= ds.totalRaffles, 'Does not exist');
+        require(ds.raffleConfigs[raffleId].startTime > block.timestamp, 'Already started');
+        require(!ds.raffles[raffleId].isCanceled, 'Raffle was canceled');
+        require(ds.raffleConfigs[raffleId].raffler == msg.sender, 'No permission');
         _;
     }
 
@@ -77,21 +76,18 @@ library UniversalRaffleCoreTwo {
             else raffle.isCanceled = true;
         }
 
-        require(
-            raffleId > 0 && raffleId <= ds.totalRaffles &&
-            !raffle.isCanceled &&
-            raffleInfo.startTime < block.timestamp && 
-            block.timestamp < raffleInfo.endTime &&
-            raffle.depositedNFTCounter > 0 &&
-            amount > 0 && amount <= ds.maxBulkPurchaseCount, "Unavailable");
+        require(raffleId > 0 && raffleId <= ds.totalRaffles, 'Does not exist');
+        require(!raffle.isCanceled, 'Raffle was canceled');
+        require(raffleInfo.startTime < block.timestamp && block.timestamp < raffleInfo.endTime, 'Out of time bounds');
+        require(amount > 0 && amount <= ds.maxBulkPurchaseCount, "Bad quantity");
     }
 
     function cancelRaffle(uint256 raffleId) external onlyRaffleSetupOwner(raffleId) {
         UniversalRaffleSchema.Storage storage ds = raffleStorage();
 
-        require(raffleId > 0 && raffleId <= ds.totalRaffles &&
-                ds.raffleConfigs[raffleId].startTime > block.timestamp &&
-                !ds.raffles[raffleId].isCanceled, "E01");
+        require(raffleId > 0 && raffleId <= ds.totalRaffles, 'Does not exist');
+        require(ds.raffleConfigs[raffleId].startTime > block.timestamp, 'Out of time bounds');
+        require(!ds.raffles[raffleId].isCanceled, "Raffle already canceled");
 
         ds.raffles[raffleId].isCanceled = true;
 
@@ -103,7 +99,7 @@ library UniversalRaffleCoreTwo {
         UniversalRaffleSchema.RaffleConfig storage raffleInfo = ds.raffleConfigs[raffleId];
         UniversalRaffleSchema.Raffle storage raffle = ds.raffles[raffleId];
 
-        require(raffle.isCanceled, "E04");
+        require(raffle.isCanceled, "Auction must be canceled");
         for (uint256 i; i < tokenIds.length;) {
             require(IERC721(ds.raffleTicketAddress).ownerOf(tokenIds[i]) == msg.sender && !raffle.refunds[tokenIds[i]], "Refund already issued");
             raffle.refunds[tokenIds[i]] = true;
@@ -173,7 +169,9 @@ library UniversalRaffleCoreTwo {
         UniversalRaffleSchema.Raffle storage raffle = ds.raffles[raffleId];
 
         uint256 raffleRevenue = ds.raffleRevenue[raffleId];
-        require(raffleId > 0 && raffleId <= ds.totalRaffles && raffle.isFinalized && raffleRevenue > 0, "E30");
+        require(raffleId > 0 && raffleId <= ds.totalRaffles, 'Does not exist');
+        require(raffle.isFinalized, 'Must be finalized');
+        require(raffleRevenue > 0, "Zero revenue");
 
         ds.raffleRevenue[raffleId] = 0;
 
@@ -209,7 +207,8 @@ library UniversalRaffleCoreTwo {
 
         UniversalRaffleSchema.DepositedNFT storage nft = raffle.slots[slotIndex].depositedNFTs[nftSlotIndex];
 
-        require(raffle.revenuePaid && nft.hasSecondarySaleFees && !nft.feesPaid, "E34");
+        require(raffle.revenuePaid, 'Revenue must be paid first');
+        require(nft.hasSecondarySaleFees && !nft.feesPaid, "Fees not supported or already paid");
 
         uint256 averageERC721SalePrice = raffleInfo.ticketPrice * raffle.ticketCounter / raffle.depositedNFTCounter;
 
@@ -231,7 +230,7 @@ library UniversalRaffleCoreTwo {
         UniversalRaffleSchema.Storage storage ds = raffleStorage();
 
         uint256 amountToWithdraw = ds.royaltiesReserve[token];
-        require(amountToWithdraw > 0, "E30");
+        require(amountToWithdraw > 0, "Zero amount");
 
         ds.royaltiesReserve[token] = 0;
 

@@ -49,14 +49,10 @@ library UniversalRaffleCore {
         UniversalRaffleSchema.Storage storage ds = raffleStorage();
         uint256 currentTime = block.timestamp;
 
-        require(
-            currentTime < config.startTime &&
-            config.startTime < config.endTime &&
-            config.totalSlots > 0 && config.totalSlots <= ds.maxNumberOfSlotsPerRaffle &&
-            config.ERC20PurchaseToken == address(0) || ds.supportedERC20Tokens[config.ERC20PurchaseToken] &&
-            config.minTicketCount > 1 && config.maxTicketCount >= config.minTicketCount,
-            "Wrong configuration"
-        );
+        require(currentTime < config.startTime && config.startTime < config.endTime, 'Out of time configuration');
+        require(config.totalSlots > 0 && config.totalSlots <= ds.maxNumberOfSlotsPerRaffle, 'Incorrect slots');
+        require(config.ERC20PurchaseToken == address(0) || ds.supportedERC20Tokens[config.ERC20PurchaseToken], 'Token not allowed');
+        require(config.minTicketCount > 1 && config.maxTicketCount >= config.minTicketCount,"Wrong ticket count");
 
         uint256 raffleId;
         if (existingRaffleId > 0) {
@@ -86,12 +82,12 @@ library UniversalRaffleCore {
         uint256 checkSum = 0;
         delete ds.raffleConfigs[raffleId].paymentSplits;
         for (uint256 k; k < config.paymentSplits.length;) {
-            require(config.paymentSplits[k].recipient != address(0) && config.paymentSplits[k].value != 0, "Bad data");
+            require(config.paymentSplits[k].recipient != address(0) && config.paymentSplits[k].value != 0, "Bad splits data");
             checkSum += config.paymentSplits[k].value;
             ds.raffleConfigs[raffleId].paymentSplits.push(config.paymentSplits[k]);
             unchecked { k++; }
         }
-        require(checkSum < 10000, "E15");
+        require(checkSum < 10000, "Splits should be less than 100%");
 
         return raffleId;
     }
@@ -108,7 +104,7 @@ library UniversalRaffleCore {
             slotIndices.length <= raffle.totalSlots &&
                 slotIndices.length <= 10 &&
                 slotIndices.length == tokens.length,
-            "E16"
+            "Incorrect slots"
         );
 
         for (uint256 i; i < slotIndices.length;) {
@@ -127,14 +123,12 @@ library UniversalRaffleCore {
         UniversalRaffleSchema.Raffle storage raffle = ds.raffles[raffleId];
         UniversalRaffleSchema.RaffleConfig storage raffleConfig = ds.raffleConfigs[raffleId];
 
-        require(
-            (msg.sender == raffleConfig.raffler || raffle.depositors[msg.sender]) &&
-            raffleConfig.totalSlots >= slotIndex && slotIndex > 0 && (tokens.length <= 40) &&
-            (raffle.slots[slotIndex].depositedNFTCounter + tokens.length <= ds.nftSlotLimit)
-        , "E36");
+        require(msg.sender == raffleConfig.raffler || raffle.depositors[msg.sender], 'No permission');
+        require(raffleConfig.totalSlots >= slotIndex && slotIndex > 0, 'Incorrect slots');
+        require(tokens.length <= 40 && raffle.slots[slotIndex].depositedNFTCounter + tokens.length <= ds.nftSlotLimit, "Too many NFTs");
 
         // Ensure previous slot has depoited NFTs, so there is no case where there is an empty slot between non-empty slots
-        if (slotIndex > 1) require(raffle.slots[slotIndex - 1].depositedNFTCounter > 0, "E39");
+        if (slotIndex > 1) require(raffle.slots[slotIndex - 1].depositedNFTCounter > 0, "Previous slot empty");
 
         uint256 nftSlotIndex = raffle.slots[slotIndex].depositedNFTCounter;
         raffle.slots[slotIndex].depositedNFTCounter += tokens.length;
@@ -206,7 +200,8 @@ library UniversalRaffleCore {
         UniversalRaffleSchema.Storage storage ds = raffleStorage();
         UniversalRaffleSchema.Raffle storage raffle = ds.raffles[raffleId];
 
-        require(raffleId > 0 && raffleId <= ds.totalRaffles && ds.raffles[raffleId].isCanceled, "E01");
+        require(raffleId > 0 && raffleId <= ds.totalRaffles, 'Does not exist');
+        require(ds.raffles[raffleId].isCanceled, "Raffle must be canceled");
 
         raffle.withdrawnNFTCounter += slotNftIndexes.length;
         raffle.depositedNFTCounter -= slotNftIndexes.length;
@@ -231,7 +226,7 @@ library UniversalRaffleCore {
             nftSlotIndex
         ];
 
-        require(msg.sender == nftForWithdrawal.depositor, "E41");
+        require(msg.sender == nftForWithdrawal.depositor, "No permission");
         delete ds.raffles[raffleId].slots[slotIndex].depositedNFTs[nftSlotIndex];
 
         emit UniversalRaffleSchema.LogERC721Withdrawal(
@@ -262,10 +257,9 @@ library UniversalRaffleCore {
 
         uint256 totalWithdrawn = winningSlot.withdrawnNFTCounter;
 
-        require(raffle.isFinalized &&
-                winningSlot.winner == msg.sender &&
-                amount <= 40 &&
-                amount <= winningSlot.depositedNFTCounter - totalWithdrawn, "E24");
+        require(raffle.isFinalized, 'Must finalize raffle');
+        require(winningSlot.winner == msg.sender, 'No permission');
+        require(amount <= 40 && amount <= winningSlot.depositedNFTCounter - totalWithdrawn, "Too many NFTs");
 
         emit UniversalRaffleSchema.LogERC721RewardsClaim(msg.sender, raffleId, slotIndex, amount);
 

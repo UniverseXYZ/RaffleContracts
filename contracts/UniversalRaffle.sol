@@ -114,7 +114,7 @@ contract UniversalRaffle is
         UniversalRaffleCoreTwo.buyRaffleTicketsChecks(raffleId, amount);
 
         if (raffle.useAllowList) {
-            require(raffle.allowList[msg.sender] >= amount);
+            require(raffle.allowList[msg.sender] >= amount, 'Allocation exceeded');
             raffle.allowList[msg.sender] -= amount;
         }
 
