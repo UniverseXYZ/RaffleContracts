@@ -163,13 +163,28 @@ library UniversalRaffleSchema {
         string raffleName
     );
 
+    event LogRaffleTicketsPurchased(
+        address indexed purchaser,
+        uint256 amount,
+        uint256 indexed raffleId
+    );
+
+    event LogRaffleTicketsRefunded(
+        address indexed purchaser,
+        uint256 indexed raffleId
+    );
+
     event LogERC721RewardsClaim(address indexed claimer, uint256 indexed raffleId, uint256 slotIndex, uint256 amount);
 
     event LogRaffleCanceled(uint256 indexed raffleId);
 
     event LogRaffleRevenueWithdrawal(address indexed recipient, uint256 indexed raffleId, uint256 amount);
 
-    event LogRoyaltiesWithdrawal( address indexed token, uint256 amount, address to);
+    event LogRaffleSecondaryFeesPayout(uint256 indexed raffleId, uint256 slotIndex, uint256 nftSlotIndex);
+
+    event LogRoyaltiesWithdrawal(address indexed token, uint256 amount, address to);
 
     event LogRaffleFinalized(uint256 indexed raffleId);
+
+    event LogWinnersFinalized(uint256 indexed raffleId);
 }

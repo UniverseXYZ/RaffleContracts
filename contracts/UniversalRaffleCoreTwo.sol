@@ -111,6 +111,7 @@ library UniversalRaffleCoreTwo {
         }
 
         uint256 amount = raffleInfo.ticketPrice.mul(tokenIds.length);
+        emit UniversalRaffleSchema.LogRaffleTicketsRefunded(msg.sender, raffleId);
         sendPayments(raffleInfo.ERC20PurchaseToken, amount, payable(msg.sender));
     }
 
@@ -222,6 +223,8 @@ library UniversalRaffleCoreTwo {
             }
             unchecked { i++; }
         }
+
+        emit UniversalRaffleSchema.LogRaffleSecondaryFeesPayout(raffleId, slotIndex, nftSlotIndex);
     }
 
     function distributeRoyalties(address token) external returns (uint256) {

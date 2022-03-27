@@ -18,6 +18,11 @@ import "./lib/LibPart.sol";
 import "./UniversalRaffleCore.sol";
 import "./UniversalRaffleCoreTwo.sol";
 
+/* TODO:
+ * Remove raffle ticket image
+ * Custom raffle ticket colors
+ */
+
 contract UniversalRaffle is 
     IUniversalRaffle,
     ERC721Holder,
@@ -130,6 +135,7 @@ contract UniversalRaffle is
         }
 
         raffle.ticketCounter += amount;
+        emit UniversalRaffleSchema.LogRaffleTicketsPurchased(msg.sender, amount, raffleId);
         IRaffleTickets(ds.raffleTicketAddress).mint(msg.sender, amount, raffleId);
     }
 
@@ -165,6 +171,7 @@ contract UniversalRaffle is
         }
 
         ds.raffles[raffleId].isFinalized = true;
+        emit UniversalRaffleSchema.LogWinnersFinalized(raffleId);
     }
 
     function claimERC721Rewards(uint256 raffleId, uint256 slotIndex, uint256 amount) external override nonReentrant {
