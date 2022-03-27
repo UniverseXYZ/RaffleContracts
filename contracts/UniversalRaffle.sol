@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Written by Tim Kang <> illestrater
-// Forked from Universe Auction House by Stan
+// Adapted from Universe Auction House by Stan
 // Product by universe.xyz
 
 pragma solidity 0.8.11;
@@ -40,10 +40,10 @@ contract UniversalRaffle is
         UniversalRaffleSchema.Storage storage ds = UniversalRaffleCore.raffleStorage();
 
         ds.unsafeVRFtesting = _unsafeVRFtesting;
-        ds.maxNumberOfSlotsPerRaffle = _maxNumberOfSlotsPerRaffle;
-        ds.maxBulkPurchaseCount = _maxBulkPurchaseCount;
-        ds.nftSlotLimit = _nftSlotLimit;
-        ds.royaltyFeeBps = _royaltyFeeBps;
+        ds.maxNumberOfSlotsPerRaffle = uint32(_maxNumberOfSlotsPerRaffle);
+        ds.maxBulkPurchaseCount = uint32(_maxBulkPurchaseCount);
+        ds.nftSlotLimit = uint32(_nftSlotLimit);
+        ds.royaltyFeeBps = uint32(_royaltyFeeBps);
         ds.royaltiesRegistry = _royaltiesRegistry;
         ds.daoAddress = payable(msg.sender);
         ds.daoInitialized = false;
@@ -129,7 +129,7 @@ contract UniversalRaffle is
             SafeERC20.safeTransferFrom(IERC20(raffleInfo.ERC20PurchaseToken), msg.sender, address(this), amount.mul(raffleInfo.ticketPrice));
         }
 
-        raffle.ticketCounter += amount;
+        raffle.ticketCounter += uint32(amount);
         emit UniversalRaffleSchema.LogRaffleTicketsPurchased(msg.sender, amount, raffleId);
         IRaffleTickets(ds.raffleTicketAddress).mint(msg.sender, amount, raffleId);
     }

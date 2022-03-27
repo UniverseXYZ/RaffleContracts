@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Written by Tim Kang <> illestrater
-// Forked from Universe Auction House by Stan
+// Adapted from Universe Auction House by Stan
 // Product by universe.xyz
 
 pragma solidity 0.8.11;
@@ -131,8 +131,8 @@ library UniversalRaffleCore {
         if (slotIndex > 1) require(raffle.slots[slotIndex - 1].depositedNFTCounter > 0, "Previous slot empty");
 
         uint256 nftSlotIndex = raffle.slots[slotIndex].depositedNFTCounter;
-        raffle.slots[slotIndex].depositedNFTCounter += tokens.length;
-        raffle.depositedNFTCounter += tokens.length;
+        raffle.slots[slotIndex].depositedNFTCounter += uint16(tokens.length);
+        raffle.depositedNFTCounter += uint16(tokens.length);
         uint256[] memory nftSlotIndexes = new uint256[](tokens.length);
         for (uint256 i; i < tokens.length;) {
             nftSlotIndex++;
@@ -203,8 +203,8 @@ library UniversalRaffleCore {
         require(raffleId > 0 && raffleId <= ds.totalRaffles, 'Does not exist');
         require(ds.raffles[raffleId].isCanceled, "Raffle must be canceled");
 
-        raffle.withdrawnNFTCounter += slotNftIndexes.length;
-        raffle.depositedNFTCounter -= slotNftIndexes.length;
+        raffle.withdrawnNFTCounter += uint16(slotNftIndexes.length);
+        raffle.depositedNFTCounter -= uint16(slotNftIndexes.length);
         for (uint256 i; i < slotNftIndexes.length;) {
             ds.raffles[raffleId].slots[slotNftIndexes[i].slotIndex].withdrawnNFTCounter += 1;
             _withdrawDepositedERC721(
@@ -263,8 +263,8 @@ library UniversalRaffleCore {
 
         emit UniversalRaffleSchema.LogERC721RewardsClaim(msg.sender, raffleId, slotIndex, amount);
 
-        raffle.withdrawnNFTCounter += amount;
-        raffle.slots[slotIndex].withdrawnNFTCounter = winningSlot.withdrawnNFTCounter += amount;
+        raffle.withdrawnNFTCounter += uint16(amount);
+        raffle.slots[slotIndex].withdrawnNFTCounter += uint16(amount);
         for (uint256 i = totalWithdrawn; i < amount + totalWithdrawn;) {
             UniversalRaffleSchema.DepositedNFT memory nftForWithdrawal = winningSlot.depositedNFTs[i + 1];
 
@@ -281,10 +281,10 @@ library UniversalRaffleCore {
     function setRaffleConfigValue(uint256 configType, uint256 _value) external onlyDAO returns (uint256) {
         UniversalRaffleSchema.Storage storage ds = raffleStorage();
 
-        if (configType == 0) ds.maxNumberOfSlotsPerRaffle = _value;
-        else if (configType == 1) ds.maxBulkPurchaseCount = _value;
-        else if (configType == 2) ds.nftSlotLimit = _value;
-        else if (configType == 3) ds.royaltyFeeBps = _value;
+        if (configType == 0) ds.maxNumberOfSlotsPerRaffle = uint32(_value);
+        else if (configType == 1) ds.maxBulkPurchaseCount = uint32(_value);
+        else if (configType == 2) ds.nftSlotLimit = uint32(_value);
+        else if (configType == 3) ds.royaltyFeeBps = uint32(_value);
 
         return _value;
     }
@@ -350,8 +350,8 @@ library UniversalRaffleCore {
         UniversalRaffleSchema.SlotInfo memory slotInfo = UniversalRaffleSchema.SlotInfo(
             slot.depositedNFTCounter,
             slot.withdrawnNFTCounter,
-            slot.winnerId,
-            slot.winner
+            slot.winner,
+            slot.winnerId
         );
         return slotInfo;
     }

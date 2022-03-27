@@ -123,8 +123,8 @@ describe("Raffle Core Tests", async function () {
       endTime,
       maxTicketCount,
       minTicketCount,
-      tokenPrice,
       totalSlots,
+      tokenPrice,
       raffleName,
       ticketColorOne,
       ticketColorTwo,
@@ -138,8 +138,8 @@ describe("Raffle Core Tests", async function () {
       endTime,
       maxTicketCount,
       minTicketCount,
-      tokenPrice,
       totalSlots,
+      tokenPrice,
       raffleName,
       ticketColorOne,
       ticketColorTwo,
@@ -153,8 +153,8 @@ describe("Raffle Core Tests", async function () {
       endTime,
       maxTicketCount,
       minTicketCount,
-      tokenPrice,
       totalSlots,
+      tokenPrice,
       raffleName,
       ticketColorOne,
       ticketColorTwo,
@@ -232,10 +232,10 @@ describe("Raffle Core Tests", async function () {
     expect(raffleInfo[1]).to.equal(zeroAddress);
     expect(raffleInfo[2].toNumber()).to.equal(startTime);
     expect(raffleInfo[3].toNumber()).to.equal(endTime);
-    expect(raffleInfo[4].toNumber()).to.equal(maxTicketCount);
-    expect(raffleInfo[5].toNumber()).to.equal(minTicketCount);
-    expect(raffleInfo[6].toString()).to.equal(tokenPrice.toString());
-    expect(raffleInfo[7]).to.equal(totalSlots)
+    expect(raffleInfo[4]).to.equal(maxTicketCount);
+    expect(raffleInfo[5]).to.equal(minTicketCount);
+    expect(raffleInfo[6]).to.equal(totalSlots)
+    expect(raffleInfo[7].toString()).to.equal(tokenPrice.toString());
     expect(raffleInfo[8]).to.equal(raffleName);
     expect(raffleInfo[9]).to.equal(ticketColorOne);
     expect(raffleInfo[10]).to.equal(ticketColorTwo);
@@ -251,10 +251,10 @@ describe("Raffle Core Tests", async function () {
     expect(raffleInfo[1]).to.equal(zeroAddress);
     expect(raffleInfo[2].toNumber()).to.equal(startTime);
     expect(raffleInfo[3].toNumber()).to.equal(endTime);
-    expect(raffleInfo[4].toNumber()).to.equal(maxTicketCount);
-    expect(raffleInfo[5].toNumber()).to.equal(minTicketCount);
-    expect(raffleInfo[6].toString()).to.equal(tokenPrice.toString());
-    expect(raffleInfo[7]).to.equal(totalSlots);
+    expect(raffleInfo[4]).to.equal(maxTicketCount);
+    expect(raffleInfo[5]).to.equal(minTicketCount);
+    expect(raffleInfo[6]).to.equal(totalSlots)
+    expect(raffleInfo[7].toString()).to.equal(tokenPrice.toString());
     expect(raffleInfo[8]).to.equal(raffleName);
     expect(raffleInfo[9]).to.equal(ticketColorOne);
     expect(raffleInfo[10]).to.equal(ticketColorTwo);
@@ -317,8 +317,8 @@ describe("Raffle Core Tests", async function () {
       endTime + 1000,
       500,
       10,
-      tokenPrice.div(3),
       1,
+      tokenPrice.div(3),
       'Raffle Raffle Raffle',
       'ffdf29',
       'ff0019',
@@ -334,8 +334,8 @@ describe("Raffle Core Tests", async function () {
       endTime + 1000,
       500,
       10,
-      tokenPrice.div(3),
       1,
+      tokenPrice.div(3),
       'Raffle Raffle Raffle',
       'ffdf29',
       'ff0019',
@@ -351,8 +351,8 @@ describe("Raffle Core Tests", async function () {
     expect(config[3]).to.equal(endTime + 1000);
     expect(config[4]).to.equal(500);
     expect(config[5]).to.equal(10);
-    expect(config[6]).to.equal(tokenPrice.div(3));
-    expect(config[7]).to.equal(totalSlots);
+    expect(config[6]).to.equal(totalSlots);
+    expect(config[7]).to.equal(tokenPrice.div(3));
     expect(config[8]).to.equal('Raffle Raffle Raffle');
     expect(config[9]).to.equal('ffdf29');
     expect(config[10]).to.equal('ff0019');
@@ -517,11 +517,11 @@ describe("Raffle Core Tests", async function () {
       const slot = await UniversalRaffle.getSlotInfo(raffleId, i);
       const depositedNFTs = await UniversalRaffle.getDepositedNftsInSlot(raffleId, i);
       expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(UniversalRaffle.address);
-      await UniversalRaffle.connect(await findSigner(slot[3])).claimERC721Rewards(raffleId, i, 1);
+      await UniversalRaffle.connect(await findSigner(slot[2])).claimERC721Rewards(raffleId, i, 1);
       if (depositedNFTs.length == 2) {
-        await UniversalRaffle.connect(await findSigner(slot[3])).claimERC721Rewards(raffleId, i, 1);
+        await UniversalRaffle.connect(await findSigner(slot[2])).claimERC721Rewards(raffleId, i, 1);
       }
-      expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(slot[3]);
+      expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(slot[2]);
     }
 
     let config = (await UniversalRaffle.getRaffleState(raffleId))[1];
@@ -557,8 +557,8 @@ describe("Raffle Core Tests", async function () {
       const slot = await UniversalRaffle.getSlotInfo(raffleId, i);
       const depositedNFTs = await UniversalRaffle.getDepositedNftsInSlot(raffleId, i);
       expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(UniversalRaffle.address);
-      await UniversalRaffle.connect(await findSigner(slot[3])).claimERC721Rewards(raffleId, i, 2);
-      expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(slot[3]);
+      await UniversalRaffle.connect(await findSigner(slot[2])).claimERC721Rewards(raffleId, i, 2);
+      expect(await mockNFT.ownerOf(depositedNFTs[0][1])).to.equal(slot[2]);
     }
 
     let config = (await UniversalRaffle.getRaffleState(raffleId))[1];
@@ -579,8 +579,8 @@ describe("Raffle Core Tests", async function () {
       endTime,
       maxTicketCount,
       minTicketCount,
-      tokenPrice,
       totalSlots,
+      tokenPrice,
       raffleName,
       ticketColorOne,
       ticketColorTwo,

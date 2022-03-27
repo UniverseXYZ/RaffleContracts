@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Written by Tim Kang <> illestrater
-// Forked from Universe Auction House by Stan
+// Adapted from Universe Auction House by Stan
 // Product by universe.xyz
 
 pragma solidity 0.8.11;
@@ -11,12 +11,12 @@ library UniversalRaffleSchema {
     struct RaffleConfig {
         address raffler;
         address ERC20PurchaseToken;
-        uint256 startTime;
-        uint256 endTime;
-        uint256 maxTicketCount;
-        uint256 minTicketCount;
-        uint256 ticketPrice;
+        uint64 startTime;
+        uint64 endTime;
+        uint32 maxTicketCount;
+        uint32 minTicketCount;
         uint32 totalSlots;
+        uint256 ticketPrice;
         string raffleName;
         string ticketColorOne;
         string ticketColorTwo;
@@ -24,10 +24,10 @@ library UniversalRaffleSchema {
     }
 
     struct Raffle {
-        uint256 ticketCounter;
-        uint256 depositedNFTCounter;
-        uint256 withdrawnNFTCounter;
-        uint256 depositorCount;
+        uint32 ticketCounter;
+        uint16 depositedNFTCounter;
+        uint16 withdrawnNFTCounter;
+        uint16 depositorCount;
         mapping(uint256 => Slot) slots;
         mapping(uint256 => bool) refunds;
         mapping(address => uint256) allowList;
@@ -40,9 +40,9 @@ library UniversalRaffleSchema {
     }
 
     struct RaffleState {
-        uint256 ticketCounter;
-        uint256 depositedNFTCounter;
-        uint256 withdrawnNFTCounter;
+        uint32 ticketCounter;
+        uint16 depositedNFTCounter;
+        uint16 withdrawnNFTCounter;
         bool useAllowList;
         bool isSetup;
         bool isCanceled;
@@ -51,23 +51,23 @@ library UniversalRaffleSchema {
     }
 
     struct Slot {
-        uint256 depositedNFTCounter;
-        uint256 withdrawnNFTCounter;
-        uint256 winnerId;
+        uint16 depositedNFTCounter;
+        uint16 withdrawnNFTCounter;
         address winner;
+        uint256 winnerId;
         mapping(uint256 => DepositedNFT) depositedNFTs;
     }
 
     struct SlotInfo {
-        uint256 depositedNFTCounter;
-        uint256 withdrawnNFTCounter;
-        uint256 winnerId;
+        uint16 depositedNFTCounter;
+        uint16 withdrawnNFTCounter;
         address winner;
+        uint256 winnerId;
     }
 
     struct SlotIndexAndNFTIndex {
-        uint256 slotIndex;
-        uint256 NFTIndex;
+        uint16 slotIndex;
+        uint16 NFTIndex;
     }
 
     struct NFT {
@@ -87,7 +87,7 @@ library UniversalRaffleSchema {
 
     struct PaymentSplit {
         address payable recipient;
-        uint256 value;
+        uint96 value;
     }
 
     struct AllowList {
@@ -99,11 +99,11 @@ library UniversalRaffleSchema {
         address daoAddress;
         address raffleTicketAddress;
         address vrfAddress;
-        uint256 totalRaffles;
-        uint256 maxNumberOfSlotsPerRaffle;
-        uint256 maxBulkPurchaseCount;
-        uint256 nftSlotLimit;
-        uint256 royaltyFeeBps;
+        uint32 totalRaffles;
+        uint32 maxNumberOfSlotsPerRaffle;
+        uint32 maxBulkPurchaseCount;
+        uint32 nftSlotLimit;
+        uint32 royaltyFeeBps;
         bool daoInitialized;
     }
 
@@ -116,15 +116,15 @@ library UniversalRaffleSchema {
         bool daoInitialized;
 
         // DAO Configurable Settings
-        uint256 maxNumberOfSlotsPerRaffle;
-        uint256 maxBulkPurchaseCount;
-        uint256 royaltyFeeBps;
-        uint256 nftSlotLimit;
+        uint32 maxNumberOfSlotsPerRaffle;
+        uint32 maxBulkPurchaseCount;
+        uint32 royaltyFeeBps;
+        uint32 nftSlotLimit;
         IRoyaltiesProvider royaltiesRegistry;
         mapping(address => bool) supportedERC20Tokens;
 
         // Raffle state and data storage
-        uint256 totalRaffles;
+        uint32 totalRaffles;
         mapping(uint256 => RaffleConfig) raffleConfigs;
         mapping(uint256 => Raffle) raffles;
         mapping(uint256 => uint256) raffleRevenue;
