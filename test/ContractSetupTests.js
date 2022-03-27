@@ -22,7 +22,7 @@ describe("Raffle Setup Security", async function () {
   const raffleImage = 'https://i.ibb.co/SdN2kw3/ill.png';
   const paymentSplits = [];
 
-  const TEST_VRF = true;
+  const UNSAFE_VRF_TESTING = true;
   const MAX_NUMBER_SLOTS = 2000;
   const MAX_BULK_PURCHASE = 50;
   const NFT_SLOT_LIMIT = 100
@@ -54,15 +54,20 @@ describe("Raffle Setup Security", async function () {
     const CoreInstance = await UniversalRaffleCore.deploy();
     await CoreInstance.deployed();
 
+    const UniversalRaffleCoreTwo = await hre.ethers.getContractFactory("UniversalRaffleCoreTwo");
+    const CoreLibInstance = await UniversalRaffleCoreTwo.deploy();
+    await CoreLibInstance.deployed();
+
     const UniversalRaffleFactory = await ethers.getContractFactory("UniversalRaffle",
     {
       libraries: {
-        UniversalRaffleCore: CoreInstance.address
+        UniversalRaffleCore: CoreInstance.address,
+        UniversalRaffleCoreTwo: CoreLibInstance.address
       }
     });
 
     const UniversalRaffle = await UniversalRaffleFactory.deploy(
-      TEST_VRF,
+      UNSAFE_VRF_TESTING,
       MAX_NUMBER_SLOTS,
       MAX_BULK_PURCHASE,
       NFT_SLOT_LIMIT,
@@ -164,7 +169,6 @@ describe("Raffle Setup Security", async function () {
     expect(config[6]).to.equal(NFT_SLOT_LIMIT);
     expect(config[7]).to.equal(ROYALTY_FEE_BPS);
     expect(config[8]).to.equal(false);
-    expect(config[9]).to.equal(true);
 
     await UniversalRaffle.transferDAOownership(addr1.address);
     await expect(UniversalRaffle.setRaffleConfigValue(0, 50)).to.be.reverted;
@@ -178,6 +182,5 @@ describe("Raffle Setup Security", async function () {
     expect(config[5]).to.equal(100);
     expect(config[6]).to.equal(50);
     expect(config[7]).to.equal(1000);
-    expect(config[8]).to.equal(true);
   })
 });

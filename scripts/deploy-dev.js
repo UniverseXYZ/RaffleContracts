@@ -14,7 +14,6 @@ const subscriptionId = 677;
 async function main() {
   const currentTime = Math.round((new Date()).getTime() / 1000);
 
-  const TEST_VRF = false;
   const zeroAddress = '0x0000000000000000000000000000000000000000';
   const startTime = currentTime + 600; // 10 mins
   const endTime = currentTime + 900; // 15 mins
@@ -23,7 +22,9 @@ async function main() {
   const tokenPrice = ethers.utils.parseEther("0.0007");
   const totalSlots = 10;
   const raffleName = 'illestrater\'s Raffle';
+  const raffleImage = 'https://ill.mypinata.cloud/ipfs/QmVaCbxWHY2vtg9FL4zAKQqFkXaLGqCYLrAjFusbAhyXoE';
   const paymentSplits = [];
+  const UNSAFE_VRF_TESTING = false;
 
   const [owner] = await ethers.getSigners();
 
@@ -56,7 +57,7 @@ async function main() {
   });
 
   const UniversalRaffle = await UniversalRaffleFactory.deploy(
-    TEST_VRF,
+    UNSAFE_VRF_TESTING,
     2000,
     50,
     100,
@@ -84,6 +85,7 @@ async function main() {
     tokenPrice,
     totalSlots,
     raffleName,
+    raffleImage,
     paymentSplits,
   ]);
 

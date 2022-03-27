@@ -16,9 +16,11 @@ import "./interfaces/IUniversalRaffle.sol";
 import "./interfaces/IRoyaltiesProvider.sol";
 import "./lib/LibPart.sol";
 import "./UniversalRaffleCore.sol";
+import "./UniversalRaffleCoreTwo.sol";
 
-/* TODO: 
- * Consumer is not decentralized and can halt raffle contracts
+/* TODO:
+ * Ensure no empty slots upon raffle
+ * Return allowed depositors
  */
 
 contract UniversalRaffle is 
@@ -29,7 +31,7 @@ contract UniversalRaffle is
     using SafeMath for uint256;
 
     constructor(
-        bool _unsafeRandomNumber,
+        bool _unsafeVRFtesting,
         uint256 _maxNumberOfSlotsPerRaffle,
         uint256 _maxBulkPurchaseCount,
         uint256 _nftSlotLimit,
@@ -42,7 +44,7 @@ contract UniversalRaffle is
     ) {
         UniversalRaffleCore.Storage storage ds = UniversalRaffleCore.raffleStorage();
 
-        ds.unsafeRandomNumber = _unsafeRandomNumber;
+        ds.unsafeVRFtesting = _unsafeVRFtesting;
         ds.maxNumberOfSlotsPerRaffle = _maxNumberOfSlotsPerRaffle;
         ds.maxBulkPurchaseCount = _maxBulkPurchaseCount;
         ds.nftSlotLimit = _nftSlotLimit;
@@ -59,16 +61,8 @@ contract UniversalRaffle is
         ds.vrfAddress = _vrfAddress;
     }
 
-    modifier onlyDAO() {
-        UniversalRaffleCore.Storage storage ds = UniversalRaffleCore.raffleStorage();
-        require(msg.sender == ds.daoAddress, "E07");
-        _;
-    }
-
-    function transferDAOownership(address payable _daoAddress) external onlyDAO {
-        UniversalRaffleCore.Storage storage ds = UniversalRaffleCore.raffleStorage();
-        ds.daoAddress = _daoAddress;
-        ds.daoInitialized = true;
+    function transferDAOownership(address payable _daoAddress) external {
+        UniversalRaffleCore.transferDAOownership(_daoAddress);
     }
 
     function getRaffleData(uint256 raffleId) private returns (
@@ -92,30 +86,23 @@ contract UniversalRaffle is
         return UniversalRaffleCore.configureRaffle(config, existingRaffleId);
     }
 
-    function setDepositors(uint256 raffleId, UniversalRaffleCore.AllowList[] calldata allowList) external override {
-        return UniversalRaffleCore.setDepositors(raffleId, allowList);
+    function setDepositors(uint256 raffleId, UniversalRaffleCoreTwo.AllowList[] calldata allowList) external override {
+        return UniversalRaffleCoreTwo.setDepositors(raffleId, allowList);
     }
 
-    function setAllowList(uint256 raffleId, UniversalRaffleCore.AllowList[] calldata allowList) external override {
-        return UniversalRaffleCore.setAllowList(raffleId, allowList);
+    function setAllowList(uint256 raffleId, UniversalRaffleCoreTwo.AllowList[] calldata allowList) external override {
+        return UniversalRaffleCoreTwo.setAllowList(raffleId, allowList);
     }
 
     function toggleAllowList(uint256 raffleId) external override {
-        return UniversalRaffleCore.toggleAllowList(raffleId);
+        return UniversalRaffleCoreTwo.toggleAllowList(raffleId);
     }
 
-    function depositNFTsToRaffle(
-        uint256 raffleId,
-        uint256[] calldata slotIndices,
-        UniversalRaffleCore.NFT[][] calldata tokens
-    ) external override {
+    function depositNFTsToRaffle(uint256 raffleId, uint256[] calldata slotIndices, UniversalRaffleCore.NFT[][] calldata tokens) external override {
         UniversalRaffleCore.depositNFTsToRaffle(raffleId, slotIndices, tokens);
     }
 
-    function withdrawDepositedERC721(
-        uint256 raffleId,
-        UniversalRaffleCore.SlotIndexAndNFTIndex[] calldata slotNftIndexes
-    ) external override nonReentrant {
+    function withdrawDepositedERC721(uint256 raffleId, UniversalRaffleCore.SlotIndexAndNFTIndex[] calldata slotNftIndexes) external override nonReentrant {
         UniversalRaffleCore.withdrawDepositedERC721(raffleId, slotNftIndexes);
     }
 
@@ -164,146 +151,49 @@ contract UniversalRaffle is
 
         if (raffle.ticketCounter < raffleInfo.minTicketCount) ds.raffles[raffleId].isCanceled = true;
         else {
-            if (ds.unsafeRandomNumber) IRandomNumberGenerator(ds.vrfAddress).getWinnersMock(raffleId); // Testing purposes only
+            if (ds.unsafeVRFtesting) IRandomNumberGenerator(ds.vrfAddress).getWinnersMock(raffleId); // Testing purposes only
             else IRandomNumberGenerator(ds.vrfAddress).getWinners(raffleId, keyHash, subscriptionId, minConf, callbackGas);
-            // IRandomNumberGenerator(ds.vrfAddress).getWinners(raffleId, keyHash, subscriptionId, minConf, callbackGas);
-            UniversalRaffleCore.calculatePaymentSplits(raffleId);
+
+            UniversalRaffleCoreTwo.calculatePaymentSplits(raffleId);
         }
+
+        emit UniversalRaffleCoreTwo.LogRaffleFinalized(raffleId);
     }
 
-    function setWinners(uint256 raffleId, uint256[] memory winnerIds, address[] memory winners) external {
+    function setWinners(uint256 raffleId, uint256[] memory winnerIds) external {
         UniversalRaffleCore.Storage storage ds = UniversalRaffleCore.raffleStorage();
         require(msg.sender == ds.vrfAddress, "No permission");
-        for (uint256 i = 1; i <= winners.length;) {
+        for (uint256 i = 1; i <= winnerIds.length;) {
             ds.raffles[raffleId].slots[i].winnerId = winnerIds[i - 1];
-            ds.raffles[raffleId].slots[i].winner = winners[i - 1];
+            ds.raffles[raffleId].slots[i].winner = IERC721(ds.raffleTicketAddress).ownerOf(winnerIds[i - 1]);
             unchecked { i++; }
         }
 
         ds.raffles[raffleId].isFinalized = true;
     }
 
-    function claimERC721Rewards(
-        uint256 raffleId,
-        uint256 slotIndex,
-        uint256 amount
-    ) external override nonReentrant {
+    function claimERC721Rewards(uint256 raffleId, uint256 slotIndex, uint256 amount) external override nonReentrant {
         UniversalRaffleCore.claimERC721Rewards(raffleId, slotIndex, amount);
     }
 
-    function refundRaffleTickets(uint256 raffleId, uint256[] memory tokenIds)
-        external
-        override
-        nonReentrant
-    {
-        (
-            UniversalRaffleCore.Storage storage ds,
-            UniversalRaffleCore.RaffleConfig storage raffleInfo,
-            UniversalRaffleCore.Raffle storage raffle
-        ) = getRaffleData(raffleId);
-
-        require(raffle.isCanceled, "E04");
-        for (uint256 i; i < tokenIds.length;) {
-            require(IERC721(ds.raffleTicketAddress).ownerOf(tokenIds[i]) == msg.sender && !raffle.refunds[tokenIds[i]], "Refund already issued");
-            raffle.refunds[tokenIds[i]] = true;
-            unchecked { i++; }
-        }
-
-        uint256 amount = raffleInfo.ticketPrice.mul(tokenIds.length);
-        sendPayments(raffleInfo.ERC20PurchaseToken, amount, payable(msg.sender));
-    }
-
     function cancelRaffle(uint256 raffleId) external override {
-        return UniversalRaffleCore.cancelRaffle(raffleId);
+        return UniversalRaffleCoreTwo.cancelRaffle(raffleId);
     }
 
-    function distributeCapturedRaffleRevenue(uint256 raffleId)
-        external
-        override
-        nonReentrant
-    {
-        (
-            UniversalRaffleCore.Storage storage ds,
-            UniversalRaffleCore.RaffleConfig storage raffleInfo,
-            UniversalRaffleCore.Raffle storage raffle
-        ) = getRaffleData(raffleId);
-
-        uint256 raffleRevenue = ds.raffleRevenue[raffleId];
-        require(raffleId > 0 && raffleId <= ds.totalRaffles && raffle.isFinalized && raffleRevenue > 0, "E30");
-
-        ds.raffleRevenue[raffleId] = 0;
-
-        uint256 remainder = (raffleInfo.ticketPrice * raffle.ticketCounter).sub(ds.rafflesRoyaltyPool[raffleId]).sub(ds.rafflesDAOPool[raffleId]);
-        uint256 value = remainder;
-        uint256 paymentSplitsPaid;
-
-        emit UniversalRaffleCore.LogRaffleRevenueWithdrawal(raffleInfo.raffler, raffleId, remainder);
-
-        // Distribute the payment splits to the respective recipients
-        for (uint256 i; i < raffleInfo.paymentSplits.length && i < 5;) {
-            uint256 fee = (remainder * raffleInfo.paymentSplits[i].value) / 10000;
-            value -= fee;
-            paymentSplitsPaid += fee;
-            sendPayments(raffleInfo.ERC20PurchaseToken, fee, raffleInfo.paymentSplits[i].recipient);
-            unchecked { i++; }
-        }
-
-        // Distribute the remaining revenue to the raffler
-        sendPayments(raffleInfo.ERC20PurchaseToken, raffleRevenue, raffleInfo.raffler);
-
-        raffle.revenuePaid = true;
+    function refundRaffleTickets(uint256 raffleId, uint256[] memory tokenIds) external override nonReentrant {
+        UniversalRaffleCoreTwo.refundRaffleTickets(raffleId, tokenIds);
     }
 
-    function distributeSecondarySaleFees(
-        uint256 raffleId,
-        uint256 slotIndex,
-        uint256 nftSlotIndex
-    ) external override nonReentrant {
-        (
-            UniversalRaffleCore.Storage storage ds,
-            UniversalRaffleCore.RaffleConfig storage raffleInfo,
-            UniversalRaffleCore.Raffle storage raffle
-        ) = getRaffleData(raffleId);
+    function distributeCapturedRaffleRevenue(uint256 raffleId) external override nonReentrant {
+        UniversalRaffleCoreTwo.distributeCapturedRaffleRevenue(raffleId);
+    }
 
-        UniversalRaffleCore.DepositedNFT storage nft = raffle.slots[slotIndex].depositedNFTs[nftSlotIndex];
-
-        require(raffle.revenuePaid && nft.hasSecondarySaleFees && !nft.feesPaid, "E34");
-
-        uint256 averageERC721SalePrice = raffleInfo.ticketPrice * raffle.ticketCounter / raffle.depositedNFTCounter;
-
-        nft.feesPaid = true;
-
-        for (uint256 i; i < nft.feesAddress.length && i < 5;) {
-            uint256 value = (averageERC721SalePrice * nft.feesValue[i]) / 10000;
-            if (ds.rafflesRoyaltyPool[raffleId] >= value) {
-                ds.rafflesRoyaltyPool[raffleId] = ds.rafflesRoyaltyPool[raffleId].sub(value);
-                sendPayments(raffleInfo.ERC20PurchaseToken, value, nft.feesAddress[i]);
-            }
-            unchecked { i++; }
-        }
+    function distributeSecondarySaleFees(uint256 raffleId, uint256 slotIndex, uint256 nftSlotIndex) external override nonReentrant {
+        UniversalRaffleCoreTwo.distributeSecondarySaleFees(raffleId, slotIndex, nftSlotIndex);
     }
 
     function distributeRoyalties(address token) external nonReentrant returns (uint256) {
-        UniversalRaffleCore.Storage storage ds = UniversalRaffleCore.raffleStorage();
-
-        uint256 amountToWithdraw = ds.royaltiesReserve[token];
-        require(amountToWithdraw > 0, "E30");
-
-        ds.royaltiesReserve[token] = 0;
-
-        sendPayments(token, amountToWithdraw, ds.daoAddress);
-        return amountToWithdraw;
-    }
-
-    function sendPayments(address tokenAddress, uint256 value, address to) internal {
-        if (tokenAddress == address(0) && value > 0) {
-            (bool success, ) = (to).call{value: value}("");
-            require(success, "TX FAILED");
-        }
-
-        if (tokenAddress != address(0) && value > 0) {
-            SafeERC20.safeTransfer(IERC20(tokenAddress), address(to), value);
-        }
+        return UniversalRaffleCoreTwo.distributeRoyalties(token);
     }
 
     function setRaffleConfigValue(uint256 configType, uint256 _value) external override returns (uint256) {
@@ -320,6 +210,10 @@ contract UniversalRaffle is
 
     function getRaffleState(uint256 raffleId) external view override returns (UniversalRaffleCore.RaffleConfig memory, UniversalRaffleCore.RaffleState memory) {
         return UniversalRaffleCore.getRaffleState(raffleId);
+    }
+
+    function getRaffleFinalize(uint256 raffleId) external view returns (bool, uint256, uint256) {
+        return UniversalRaffleCore.getRaffleFinalize(raffleId);
     }
 
     function getAllowList(uint256 raffleId, address participant) external view override returns (uint256) {

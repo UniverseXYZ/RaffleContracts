@@ -42,7 +42,7 @@ describe("Raffle Royalty Tests", async function () {
   const raffleImage = 'https://i.ibb.co/SdN2kw3/ill.png';
   const paymentSplits = [[randomWallet3.address, 1000], [randomWallet4.address, 500]];
 
-  const TEST_VRF = true;
+  const UNSAFE_VRF_TESTING = true;
   const MAX_NUMBER_SLOTS = 2000;
   const MAX_BULK_PURCHASE = 50;
   const NFT_SLOT_LIMIT = 100;
@@ -76,15 +76,20 @@ describe("Raffle Royalty Tests", async function () {
     const CoreInstance = await UniversalRaffleCore.deploy();
     await CoreInstance.deployed();
 
+    const UniversalRaffleCoreTwo = await hre.ethers.getContractFactory("UniversalRaffleCoreTwo");
+    const CoreLibInstance = await UniversalRaffleCoreTwo.deploy();
+    await CoreLibInstance.deployed();
+
     const UniversalRaffleFactory = await ethers.getContractFactory("UniversalRaffle",
     {
       libraries: {
-        UniversalRaffleCore: CoreInstance.address
+        UniversalRaffleCore: CoreInstance.address,
+        UniversalRaffleCoreTwo: CoreLibInstance.address
       }
     });
 
     const UniversalRaffle = await UniversalRaffleFactory.deploy(
-      TEST_VRF,
+      UNSAFE_VRF_TESTING,
       MAX_NUMBER_SLOTS,
       MAX_BULK_PURCHASE,
       NFT_SLOT_LIMIT,
@@ -148,7 +153,7 @@ describe("Raffle Royalty Tests", async function () {
       startTime,
       endTime,
       maxTicketCount,
-      minTicketCount,
+      10,
       tokenPrice,
       totalSlots,
       raffleName,
@@ -366,12 +371,8 @@ describe("Raffle Royalty Tests", async function () {
     await UniversalRaffle.setRaffleConfigValue(3, 1000);
 
     const raffleId = 3;
-    const buyAmount = 20;
-    await mockToken.approve(UniversalRaffle.address, tokenPrice.mul(buyAmount * 5));
-    await UniversalRaffle.buyRaffleTickets(raffleId, buyAmount, { value: tokenPrice.mul(buyAmount) });
-    await UniversalRaffle.buyRaffleTickets(raffleId, buyAmount, { value: tokenPrice.mul(buyAmount) });
-    await UniversalRaffle.buyRaffleTickets(raffleId, buyAmount, { value: tokenPrice.mul(buyAmount) });
-    await UniversalRaffle.buyRaffleTickets(raffleId, buyAmount, { value: tokenPrice.mul(buyAmount) });
+    const buyAmount = 10;
+    await mockToken.approve(UniversalRaffle.address, tokenPrice.mul(buyAmount));
     await UniversalRaffle.buyRaffleTickets(raffleId, buyAmount, { value: tokenPrice.mul(buyAmount) });
 
     const endTime = currentTime + 100000;
@@ -383,7 +384,7 @@ describe("Raffle Royalty Tests", async function () {
 
     const rafflerBalance = await mockToken.balanceOf(addr1.address);
     await UniversalRaffle.connect(addr2).distributeCapturedRaffleRevenue(raffleId);
-    const revenue = tokenPrice.mul(buyAmount * 5);
+    const revenue = tokenPrice.mul(buyAmount);
     const nftRoyalties = revenue.mul(1500).div(10000);
     const daoRevenue = revenue.sub(nftRoyalties).mul(1000).div(10000);
     const daoBalance = await mockToken.balanceOf(owner.address);

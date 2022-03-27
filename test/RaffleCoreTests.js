@@ -43,7 +43,7 @@ describe("Raffle Core Tests", async function () {
   const raffleImage = 'https://i.ibb.co/SdN2kw3/ill.png';
   const paymentSplits = [];
 
-  const TEST_VRF = true;
+  const UNSAFE_VRF_TESTING = true;
   const MAX_NUMBER_SLOTS = 2000;
   const MAX_BULK_PURCHASE = 50;
   const NFT_SLOT_LIMIT = 100
@@ -75,15 +75,20 @@ describe("Raffle Core Tests", async function () {
     const CoreInstance = await UniversalRaffleCore.deploy();
     await CoreInstance.deployed();
 
+    const UniversalRaffleCoreTwo = await hre.ethers.getContractFactory("UniversalRaffleCoreTwo");
+    const CoreLibInstance = await UniversalRaffleCoreTwo.deploy();
+    await CoreLibInstance.deployed();
+
     const UniversalRaffleFactory = await ethers.getContractFactory("UniversalRaffle",
     {
       libraries: {
-        UniversalRaffleCore: CoreInstance.address
+        UniversalRaffleCore: CoreInstance.address,
+        UniversalRaffleCoreTwo: CoreLibInstance.address
       }
     });
 
     const UniversalRaffle = await UniversalRaffleFactory.deploy(
-      TEST_VRF,
+      UNSAFE_VRF_TESTING,
       MAX_NUMBER_SLOTS,
       MAX_BULK_PURCHASE,
       NFT_SLOT_LIMIT,

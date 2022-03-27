@@ -7,6 +7,7 @@ pragma solidity 0.8.11;
 
 import "./IRoyaltiesProvider.sol";
 import "../UniversalRaffleCore.sol";
+import "../UniversalRaffleCoreTwo.sol";
 
 /// @title Users buy raffle tickets in order to win deposited ERC721 tokens.
 /// @notice This interface should be implemented by the NFTRaffle contract
@@ -33,12 +34,12 @@ interface IUniversalRaffle {
   /// @notice Sets addresses able to deposit NFTs to raffle
   /// @param raffleId The raffle id
   /// @param allowList Array of [address, 1 for true, 0 for false]
-  function setDepositors(uint256 raffleId, UniversalRaffleCore.AllowList[] calldata allowList) external;
+  function setDepositors(uint256 raffleId, UniversalRaffleCoreTwo.AllowList[] calldata allowList) external;
 
   /// @notice Sets allow list addresses and allowances
   /// @param raffleId The raffle id
   /// @param allowList Array of [address, allowance]
-  function setAllowList(uint256 raffleId, UniversalRaffleCore.AllowList[] calldata allowList) external;
+  function setAllowList(uint256 raffleId, UniversalRaffleCoreTwo.AllowList[] calldata allowList) external;
 
   /// @notice Turns allow list on and off
   /// @param raffleId The raffle id
@@ -73,8 +74,7 @@ interface IUniversalRaffle {
 
   /// @notice Select winners of raffle
   /// @param raffleId The raffle id
-  /// @param winners Array of winner addresses
-  function setWinners(uint256 raffleId, uint256[] memory winnerIds, address[] memory winners) external;
+  function setWinners(uint256 raffleId, uint256[] memory winnerIds) external;
 
   /// @notice Claims and distributes the NFTs from a winning slot
   /// @param raffleId The auction id
@@ -136,6 +136,14 @@ interface IUniversalRaffle {
       external
       view
       returns (UniversalRaffleCore.RaffleConfig memory, UniversalRaffleCore.RaffleState memory);
+
+  /// @notice Gets raffle finalize state variables
+  /// @param raffleId The raffle id
+  function getRaffleFinalize(uint256 raffleId)
+      external
+      view
+      returns (bool, uint256, uint256);
+
 
   /// @notice Gets allow list
   /// @param raffleId The raffle id

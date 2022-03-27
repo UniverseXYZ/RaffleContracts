@@ -78,71 +78,72 @@ contract RandomNumberGenerator is IRandomNumberGenerator, VRFConsumerBaseV2 {
     function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
         uint256 raffleId = vrfToRaffleId[requestId];
 
-        (UniversalRaffleCore.RaffleConfig memory raffle, UniversalRaffleCore.RaffleState memory raffleState) = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
-        uint256 totalSlots = raffle.totalSlots;
-        uint256 ticketCounter = raffleState.ticketCounter;
-
-        require (true, 'Already finalized');
+        (bool isFinalized, uint256 totalSlots, uint256 ticketCounter) = IUniversalRaffle(universalRaffleAddress).getRaffleFinalize(raffleId);
+        require (!isFinalized, 'Already finalized');
 
         uint256[] memory winnerIds = new uint256[](totalSlots);
-        address[] memory winners = new address[](totalSlots);
-        for (uint32 i = 0; i < totalSlots; i++) {
+        for (uint32 i = 0; i < totalSlots;) {
           uint256 winnerId = (raffleId * 10000000) + (randomWords[i] % ticketCounter) + 1;
 
           bool stored = false;
           while (!stored) {
-            for (uint32 j = 0; j < winnerIds.length; j++) {
-              if (winnerIds[j] == winnerId) {
-                if (((randomWords[i] % ticketCounter) + j + 1) == ticketCounter) {
-                  winnerId = (raffleId * 10000000) + 1;
-                } else winnerId++;
-              } else {
-                stored = true;
-              }
+            bool duplicate = false;
+            for (uint256 j = 0; j < winnerIds.length;) {
+              if (winnerIds[j] == winnerId) duplicate = true;
+              unchecked { j++; }
             }
+
+            if (duplicate) {
+              if (winnerId - (raffleId * 10000000) == ticketCounter)
+                winnerId = (raffleId * 10000000) + 1;
+              else winnerId++;
+            } else stored = true;
           }
 
           winnerIds[i] = winnerId;
-          winners[i] = raffleTickets.ownerOf(winnerId);
+
+          unchecked { i++; }
         }
 
-        IUniversalRaffle(universalRaffleAddress).setWinners(raffleId, winnerIds, winners);
+        IUniversalRaffle(universalRaffleAddress).setWinners(raffleId, winnerIds);
     }
 
     // Used for testing purposes only
     function getWinnersMock(uint256 raffleId) external override onlyRaffleContract() {
-        (UniversalRaffleCore.RaffleConfig memory raffle, UniversalRaffleCore.RaffleState memory raffleState) = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
-        uint256 totalSlots = raffle.totalSlots;
-        uint256 ticketCounter = raffleState.ticketCounter;
+        (bool isFinalized, uint256 totalSlots, uint256 ticketCounter) = IUniversalRaffle(universalRaffleAddress).getRaffleFinalize(raffleId);
+        require (!isFinalized, 'Already finalized');
 
         uint256[] memory randomWords = new uint256[](totalSlots);
-        for (uint256 i = 0; i < totalSlots; i++) {
+        for (uint256 i = 0; i < totalSlots;) {
             uint256 randomNumber = uint256(keccak256(abi.encodePacked(block.difficulty, block.timestamp, raffleId + i)));
             randomWords[i] = randomNumber;
+            unchecked { i++; }
         }
 
         uint256[] memory winnerIds = new uint256[](totalSlots);
-        address[] memory winners = new address[](totalSlots);
-        for (uint32 i = 0; i < totalSlots; i++) {
+        for (uint32 i = 0; i < totalSlots;) {
           uint256 winnerId = (raffleId * 10000000) + (randomWords[i] % ticketCounter) + 1;
 
           bool stored = false;
           while (!stored) {
-            for (uint32 j = 0; j < winnerIds.length; j++) {
-              if (winnerIds[j] == winnerId) {
-                if (((randomWords[i] % ticketCounter) + j + 1) == ticketCounter) {
-                  winnerId = (raffleId * 10000000) + 1;
-                } else winnerId++;
-              } else {
-                stored = true;
-              }
+            bool duplicate = false;
+            for (uint256 j = 0; j < winnerIds.length;) {
+              if (winnerIds[j] == winnerId) duplicate = true;
+              unchecked { j++; }
             }
+
+            if (duplicate) {
+              if (winnerId - (raffleId * 10000000) == ticketCounter)
+                winnerId = (raffleId * 10000000) + 1;
+              else winnerId++;
+            } else stored = true;
           }
 
           winnerIds[i] = winnerId;
-          winners[i] = raffleTickets.ownerOf(winnerId);
+
+          unchecked { i++; }
         }
 
-        IUniversalRaffle(universalRaffleAddress).setWinners(raffleId, winnerIds, winners);
+        IUniversalRaffle(universalRaffleAddress).setWinners(raffleId, winnerIds);
     }
 }
