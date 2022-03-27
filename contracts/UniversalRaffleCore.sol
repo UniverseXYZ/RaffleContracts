@@ -26,16 +26,15 @@ library UniversalRaffleCore {
 
     modifier onlyRaffleSetup(uint256 raffleId) {
         UniversalRaffleSchema.Storage storage ds = raffleStorage();
-        require(raffleId > 0 &&
-                raffleId <= ds.totalRaffles &&
-                ds.raffleConfigs[raffleId].startTime > block.timestamp &&
-                !ds.raffles[raffleId].isCanceled, "E01");
+        require(raffleId > 0 && raffleId <= ds.totalRaffles, 'Does not exist');
+        require(ds.raffleConfigs[raffleId].startTime > block.timestamp, 'Out of time bounds');
+        require(!ds.raffles[raffleId].isCanceled, 'Raffle is canceled');
         _;
     }
 
     modifier onlyDAO() {
         UniversalRaffleSchema.Storage storage ds = raffleStorage();
-        require(msg.sender == ds.daoAddress, "E07");
+        require(msg.sender == ds.daoAddress, 'Only DAO allowed');
         _;
     }
 
@@ -49,15 +48,16 @@ library UniversalRaffleCore {
         UniversalRaffleSchema.Storage storage ds = raffleStorage();
         uint256 currentTime = block.timestamp;
 
-        require(currentTime < config.startTime && config.startTime < config.endTime, 'Out of time configuration');
+        require(currentTime < config.startTime && config.startTime < config.endTime, 'Out of time bounds');
         require(config.totalSlots > 0 && config.totalSlots <= ds.maxNumberOfSlotsPerRaffle, 'Incorrect slots');
         require(config.ERC20PurchaseToken == address(0) || ds.supportedERC20Tokens[config.ERC20PurchaseToken], 'Token not allowed');
-        require(config.minTicketCount > 1 && config.maxTicketCount >= config.minTicketCount,"Wrong ticket count");
+        require(config.minTicketCount > 1 && config.maxTicketCount >= config.minTicketCount, 'Wrong ticket count');
+        require(bytes(config.raffleName).length <= 50, 'Raffle name too long');
 
         uint256 raffleId;
         if (existingRaffleId > 0) {
             raffleId = existingRaffleId;
-            require(ds.raffleConfigs[raffleId].raffler == msg.sender && ds.raffleConfigs[raffleId].startTime > currentTime, "No permission");
+            require(ds.raffleConfigs[raffleId].raffler == msg.sender && ds.raffleConfigs[raffleId].startTime > currentTime, 'No permission');
             emit UniversalRaffleSchema.LogRaffleEdited(raffleId, msg.sender, config.raffleName);
         } else {
             ds.totalRaffles = ds.totalRaffles + 1;
@@ -82,12 +82,12 @@ library UniversalRaffleCore {
         uint256 checkSum = 0;
         delete ds.raffleConfigs[raffleId].paymentSplits;
         for (uint256 k; k < config.paymentSplits.length;) {
-            require(config.paymentSplits[k].recipient != address(0) && config.paymentSplits[k].value != 0, "Bad splits data");
+            require(config.paymentSplits[k].recipient != address(0) && config.paymentSplits[k].value != 0, 'Bad splits data');
             checkSum += config.paymentSplits[k].value;
             ds.raffleConfigs[raffleId].paymentSplits.push(config.paymentSplits[k]);
             unchecked { k++; }
         }
-        require(checkSum < 10000, "Splits should be less than 100%");
+        require(checkSum < 10000, 'Splits should be less than 100%');
 
         return raffleId;
     }
@@ -108,7 +108,7 @@ library UniversalRaffleCore {
         );
 
         for (uint256 i; i < slotIndices.length;) {
-            require(tokens[i].length <= 5, "E17");
+            require(tokens[i].length <= 5, "Too many NFTs");
             depositERC721(raffleId, slotIndices[i], tokens[i]);
             unchecked { i++; }
         }

@@ -141,9 +141,10 @@ contract UniversalRaffle is
             UniversalRaffleSchema.Raffle storage raffle
         ) = getRaffleData(raffleId);
 
-        require(raffleId > 0 && raffleId <= ds.totalRaffles &&
-                !raffle.isCanceled &&
-                block.timestamp > raffleInfo.endTime && !raffle.isFinalized, "E01");
+        require(raffleId > 0 && raffleId <= ds.totalRaffles, 'Does not exist');
+        require(!raffle.isCanceled, 'Raffle is canceled');
+        require(block.timestamp > raffleInfo.endTime, 'Raffle has not ended');
+        require(!raffle.isFinalized, "Already finalized");
 
         if (raffle.ticketCounter < raffleInfo.minTicketCount) ds.raffles[raffleId].isCanceled = true;
         else {

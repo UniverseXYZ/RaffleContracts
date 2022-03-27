@@ -22,7 +22,8 @@ async function main() {
   const tokenPrice = ethers.utils.parseEther("0.0007");
   const totalSlots = 10;
   const raffleName = 'illestrater\'s Raffle';
-  const raffleImage = 'https://ill.mypinata.cloud/ipfs/QmVaCbxWHY2vtg9FL4zAKQqFkXaLGqCYLrAjFusbAhyXoE';
+  const ticketColorOne = 'ffdf29';
+  const ticketColorTwo = 'ff0019';
   const paymentSplits = [];
   const UNSAFE_VRF_TESTING = false;
 
@@ -49,10 +50,16 @@ async function main() {
   await CoreInstance.deployed();
   console.log('Raffle Core deployed', CoreInstance.address);
 
+  const UniversalRaffleCoreTwo = await hre.ethers.getContractFactory("UniversalRaffleCoreTwo");
+  const CoreLibInstance = await UniversalRaffleCoreTwo.deploy();
+  await CoreLibInstance.deployed();
+  console.log('Raffle Core Two deployed', CoreInstance.address);
+
   const UniversalRaffleFactory = await ethers.getContractFactory("UniversalRaffle",
   {
     libraries: {
-      UniversalRaffleCore: CoreInstance.address
+      UniversalRaffleCore: CoreInstance.address,
+      UniversalRaffleCoreTwo: CoreLibInstance.address
     }
   });
 
@@ -82,10 +89,11 @@ async function main() {
     endTime,
     maxTicketCount,
     minTicketCount,
-    tokenPrice,
     totalSlots,
+    tokenPrice,
     raffleName,
-    raffleImage,
+    ticketColorOne,
+    ticketColorTwo,
     paymentSplits,
   ]);
 
@@ -137,9 +145,19 @@ async function main() {
 
   try {
     await hre.run("verify:verify", {
+      address: CoreLibInstance.address
+    });
+  } catch (e) {
+    console.log('got error', e);
+  }
+
+  console.log('Raffle Core Two verified');
+
+  try {
+    await hre.run("verify:verify", {
       address: UniversalRaffle.address,
       constructorArguments: [
-        TEST_VRF,
+        UNSAFE_VRF_TESTING,
         2000,
         50,
         100,
