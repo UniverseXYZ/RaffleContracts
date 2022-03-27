@@ -6,6 +6,7 @@ pragma solidity 0.8.11;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "./UniversalRaffleCore.sol";
+import "./UniversalRaffleSchema.sol";
 import "./interfaces/IUniversalRaffle.sol";
 import "./interfaces/IRaffleTickets.sol";
 import "./HelperFunctions.sol";
@@ -52,7 +53,7 @@ contract RaffleTickets is IRaffleTickets, ERC721 {
   function tokenURI(uint256 tokenId) public view override returns (string memory) {
     uint256 raffleId = HelperFunctions.safeParseInt(HelperFunctions.substring(HelperFunctions.toString(tokenId), bytes(HelperFunctions.toString(tokenId)).length - 8, bytes(HelperFunctions.toString(tokenId)).length - 7));
     // UniversalRaffleCore.RaffleConfig memory raffle = IUniversalRaffle(universalRaffleAddress).getRaffleConfig(raffleId);
-    (UniversalRaffleCore.RaffleConfig memory raffle, UniversalRaffleCore.RaffleState memory raffleState) = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
+    (UniversalRaffleSchema.RaffleConfig memory raffle, UniversalRaffleSchema.RaffleState memory raffleState) = IUniversalRaffle(universalRaffleAddress).getRaffleState(raffleId);
     uint256 ticketId = tokenId - (raffleId * 10000000);
 
     string memory claim;
@@ -67,7 +68,7 @@ contract RaffleTickets is IRaffleTickets, ERC721 {
     }
 
     for (uint256 i = 0; i < raffle.totalSlots; i++) {
-      UniversalRaffleCore.SlotInfo memory slot = IUniversalRaffle(universalRaffleAddress).getSlotInfo(raffleId, i + 1);
+      UniversalRaffleSchema.SlotInfo memory slot = IUniversalRaffle(universalRaffleAddress).getSlotInfo(raffleId, i + 1);
       if (slot.winnerId == tokenId) {
         if (slot.depositedNFTCounter == slot.withdrawnNFTCounter) claim = 'Prize Claimed';
         else if (slot.withdrawnNFTCounter > 0) claim = 'Partially Claimed';

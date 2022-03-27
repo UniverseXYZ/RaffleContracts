@@ -178,15 +178,16 @@ describe("Raffle Core Tests", async function () {
       NFTs.push([[i, mockNFT.address]]);
     }
 
-    NFTs[1].push([11, mockNFT.address]);
-
     await mockNFT.connect(addr1).setApprovalForAll(UniversalRaffle.address, true);
     await mockNFT.connect(addr2).setApprovalForAll(UniversalRaffle.address, true);
 
     await UniversalRaffle.connect(addr1).depositNFTsToRaffle(1, slotIndexes, NFTs);
-    await UniversalRaffle.connect(addr1).depositNFTsToRaffle(2, [1], [[[12, mockNFT.address]]]);
-    await UniversalRaffle.connect(addr1).depositNFTsToRaffle(2, [2], [[[13, mockNFT.address]]]);
-    await UniversalRaffle.connect(addr1).depositNFTsToRaffle(2, [1, 2], [[[14, mockNFT.address]], [[15, mockNFT.address]]]);
+    await UniversalRaffle.connect(addr1).depositNFTsToRaffle(2, [1], [[[11, mockNFT.address]]]);
+    await UniversalRaffle.connect(addr1).depositNFTsToRaffle(2, [2], [[[12, mockNFT.address]]]);
+    await UniversalRaffle.connect(addr1).depositNFTsToRaffle(2, [3,4,5,6,7,8,9,10], [
+      [[13, mockNFT.address]], [[14, mockNFT.address]], [[15, mockNFT.address]], [[16, mockNFT.address]],
+      [[17, mockNFT.address]], [[18, mockNFT.address]], [[19, mockNFT.address]], [[20, mockNFT.address]]
+    ]);
 
     // Multi depositors
     await UniversalRaffle.connect(addr1).setDepositors(3, [[addr1.address, 2], [addr2.address, 1]]);
@@ -408,7 +409,7 @@ describe("Raffle Core Tests", async function () {
     await UniversalRaffle.finalizeRaffle(raffleId, '0x0000000000000000000000000000000000000000000000000000000000000000', 0, 0, 0);
 
     let config = (await UniversalRaffle.getRaffleState(raffleId))[1];
-    expect(config[4]).to.equal(true);
+    expect(config[5]).to.equal(true);
 
     let contractBalancePre = await mockToken.balanceOf(UniversalRaffle.address);
     let ownerBalancePre = await mockToken.balanceOf(owner.address);
@@ -434,6 +435,16 @@ describe("Raffle Core Tests", async function () {
 
     await expect(UniversalRaffle.refundRaffleTickets(raffleId, [tokenId + 3, tokenId + 4])).to.be.reverted;
   });
+
+  it('should set depositors list', async () => {
+    const [owner, addr1, addr2] = await ethers.getSigners();
+    const { UniversalRaffle, mockToken } = await loadFixture(raffleWithNFTs);
+
+    const raffleId = 3;
+
+    expect(await UniversalRaffle.getDepositorList(raffleId, addr1.address)).to.equal(false);
+    expect(await UniversalRaffle.getDepositorList(raffleId, addr2.address)).to.equal(true);
+  })
 
   it('should set allow list', async () => {
     const [owner, addr1, addr2, addr3, addr4] = await ethers.getSigners();
@@ -505,10 +516,10 @@ describe("Raffle Core Tests", async function () {
     }
 
     let config = (await UniversalRaffle.getRaffleState(raffleId))[1];
-    expect(config[1]).to.equal(11);
-    expect(config[2]).to.equal(11);
-    expect(config[5]).to.equal(true);
-    expect(config[4]).to.equal(false);
+    expect(config[1]).to.equal(10);
+    expect(config[2]).to.equal(10);
+    expect(config[6]).to.equal(true);
+    expect(config[5]).to.equal(false);
   });
 
   it('should finalize raffle and claim multiple prizes & depositors', async () => {
@@ -544,7 +555,50 @@ describe("Raffle Core Tests", async function () {
     let config = (await UniversalRaffle.getRaffleState(raffleId))[1];
     expect(config[1]).to.equal(20);
     expect(config[2]).to.equal(20);
-    expect(config[5]).to.equal(true);
-    expect(config[4]).to.equal(false);
+    expect(config[6]).to.equal(true);
+    expect(config[5]).to.equal(false);
   });
+
+  it('should cancel raffle if not fully deposited', async () => {
+    const [owner, addr1] = await ethers.getSigners();
+    const { UniversalRaffle, mockNFT } = await loadFixture(deployContracts);
+
+    await UniversalRaffle.connect(addr1).createRaffle([
+      addr1.address,
+      zeroAddress,
+      startTime,
+      endTime,
+      maxTicketCount,
+      minTicketCount,
+      tokenPrice,
+      totalSlots,
+      raffleName,
+      raffleImage,
+      paymentSplits,
+    ]);
+
+    let counter = 0;
+    while (counter < 5) {
+      await mockNFT.connect(addr1).mint(addr1.address, 'nftURI');
+      counter++;
+    }
+
+    let slotIndexes = [];
+    let NFTs = [];
+    for (let i = 1; i <= 5; i++) {
+      slotIndexes.push(i);
+      NFTs.push([[i, mockNFT.address]]);
+    }
+
+    await mockNFT.connect(addr1).setApprovalForAll(UniversalRaffle.address, true);
+    await UniversalRaffle.connect(addr1).depositNFTsToRaffle(1, slotIndexes, NFTs);
+
+    const newTime = currentTime + 2000;
+    await ethers.provider.send('evm_setNextBlockTimestamp', [newTime]);
+    await ethers.provider.send('evm_mine');
+
+    const raffleId = 1;
+    const buyAmount = 20;
+    await expect(UniversalRaffle.buyRaffleTickets(raffleId, buyAmount, { value: tokenPrice.mul(buyAmount) })).to.be.reverted;
+  })
 });

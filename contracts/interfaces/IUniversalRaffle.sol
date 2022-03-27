@@ -8,6 +8,7 @@ pragma solidity 0.8.11;
 import "./IRoyaltiesProvider.sol";
 import "../UniversalRaffleCore.sol";
 import "../UniversalRaffleCoreTwo.sol";
+import "../UniversalRaffleSchema.sol";
 
 /// @title Users buy raffle tickets in order to win deposited ERC721 tokens.
 /// @notice This interface should be implemented by the NFTRaffle contract
@@ -24,22 +25,22 @@ interface IUniversalRaffle {
   /// @dev config.ticketPrice Price per raffle ticket
   /// @dev config.totalSlots The number of winner slots which the raffle will have
   /// @dev config.paymentSplits Array of payment splits which will be distributed after raffle ends
-  function createRaffle(UniversalRaffleCore.RaffleConfig calldata config) external returns (uint256);
+  function createRaffle(UniversalRaffleSchema.RaffleConfig calldata config) external returns (uint256);
 
   /// @notice Change raffle configuration
   /// @param config Raffle configuration above
   /// @param existingRaffleId The raffle id
-  function reconfigureRaffle(UniversalRaffleCore.RaffleConfig calldata config, uint256 existingRaffleId) external returns (uint256);
+  function reconfigureRaffle(UniversalRaffleSchema.RaffleConfig calldata config, uint256 existingRaffleId) external returns (uint256);
 
   /// @notice Sets addresses able to deposit NFTs to raffle
   /// @param raffleId The raffle id
   /// @param allowList Array of [address, 1 for true, 0 for false]
-  function setDepositors(uint256 raffleId, UniversalRaffleCoreTwo.AllowList[] calldata allowList) external;
+  function setDepositors(uint256 raffleId, UniversalRaffleSchema.AllowList[] calldata allowList) external;
 
   /// @notice Sets allow list addresses and allowances
   /// @param raffleId The raffle id
   /// @param allowList Array of [address, allowance]
-  function setAllowList(uint256 raffleId, UniversalRaffleCoreTwo.AllowList[] calldata allowList) external;
+  function setAllowList(uint256 raffleId, UniversalRaffleSchema.AllowList[] calldata allowList) external;
 
   /// @notice Turns allow list on and off
   /// @param raffleId The raffle id
@@ -52,7 +53,7 @@ interface IUniversalRaffle {
   function depositNFTsToRaffle(
       uint256 raffleId,
       uint256[] calldata slotIndices,
-      UniversalRaffleCore.NFT[][] calldata tokens
+      UniversalRaffleSchema.NFT[][] calldata tokens
   ) external;
 
   /// @notice Withdraws the deposited ERC721 before an auction has started
@@ -60,7 +61,7 @@ interface IUniversalRaffle {
   /// @param slotNftIndexes The slot index and nft index in array [[slot index, nft index]]
   function withdrawDepositedERC721(
       uint256 raffleId,
-      UniversalRaffleCore.SlotIndexAndNFTIndex[] calldata slotNftIndexes
+      UniversalRaffleSchema.SlotIndexAndNFTIndex[] calldata slotNftIndexes
   ) external;
 
   /// @notice Purchases raffle tickets
@@ -135,7 +136,7 @@ interface IUniversalRaffle {
   function getRaffleState(uint256 raffleId)
       external
       view
-      returns (UniversalRaffleCore.RaffleConfig memory, UniversalRaffleCore.RaffleState memory);
+      returns (UniversalRaffleSchema.RaffleConfig memory, UniversalRaffleSchema.RaffleState memory);
 
   /// @notice Gets raffle finalize state variables
   /// @param raffleId The raffle id
@@ -143,6 +144,13 @@ interface IUniversalRaffle {
       external
       view
       returns (bool, uint256, uint256);
+
+  /// @notice Gets allow list
+  /// @param raffleId The raffle id
+  function getDepositorList(uint256 raffleId, address participant)
+      external
+      view
+      returns (bool);
 
 
   /// @notice Gets allow list
@@ -159,13 +167,13 @@ interface IUniversalRaffle {
   function getDepositedNftsInSlot(uint256 raffleId, uint256 slotIndex)
       external
       view
-      returns (UniversalRaffleCore.DepositedNFT[] memory);
+      returns (UniversalRaffleSchema.DepositedNFT[] memory);
 
   /// @notice Gets slot info for particular auction
   /// @param raffleId The raffle id
   /// @param slotIndex The slot index
-  function getSlotInfo(uint256 raffleId, uint256 slotIndex) external view returns (UniversalRaffleCore.SlotInfo memory);
+  function getSlotInfo(uint256 raffleId, uint256 slotIndex) external view returns (UniversalRaffleSchema.SlotInfo memory);
 
   /// @notice Gets contract configuration controlled by DAO
-  function getContractConfig() external view returns (UniversalRaffleCore.ContractConfigByDAO memory);
+  function getContractConfig() external view returns (UniversalRaffleSchema.ContractConfigByDAO memory);
 }

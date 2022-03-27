@@ -10,185 +10,22 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./interfaces/IRoyaltiesProvider.sol";
 import "./lib/LibPart.sol";
+import "./UniversalRaffleSchema.sol";
 
 library UniversalRaffleCore {
     using SafeMath for uint256;
 
     bytes32 constant STORAGE_POSITION = keccak256("com.universe.raffle.storage");
 
-    struct RaffleConfig {
-        address raffler;
-        address ERC20PurchaseToken;
-        uint256 startTime;
-        uint256 endTime;
-        uint256 maxTicketCount;
-        uint256 minTicketCount;
-        uint256 ticketPrice;
-        uint32 totalSlots;
-        string raffleName;
-        string raffleImageURL;
-        PaymentSplit[] paymentSplits;
-    }
-
-    struct Raffle {
-        uint256 ticketCounter;
-        uint256 depositedNFTCounter;
-        uint256 withdrawnNFTCounter;
-        uint256 depositorCount;
-        mapping(uint256 => Slot) slots;
-        mapping(uint256 => bool) refunds;
-        mapping(address => uint256) allowList;
-        mapping(address => bool) depositors;
-        bool useAllowList;
-        bool isCanceled;
-        bool isFinalized;
-        bool revenuePaid;
-    }
-
-    struct RaffleState {
-        uint256 ticketCounter;
-        uint256 depositedNFTCounter;
-        uint256 withdrawnNFTCounter;
-        bool useAllowList;
-        bool isCanceled;
-        bool isFinalized;
-        bool revenuePaid;
-    }
-
-    struct Slot {
-        uint256 depositedNFTCounter;
-        uint256 withdrawnNFTCounter;
-        uint256 winnerId;
-        address winner;
-        mapping(uint256 => DepositedNFT) depositedNFTs;
-    }
-
-    struct SlotInfo {
-        uint256 depositedNFTCounter;
-        uint256 withdrawnNFTCounter;
-        uint256 winnerId;
-        address winner;
-    }
-
-    struct SlotIndexAndNFTIndex {
-        uint256 slotIndex;
-        uint256 NFTIndex;
-    }
-
-    struct NFT {
-        uint256 tokenId;
-        address tokenAddress;
-    }
-
-    struct DepositedNFT {
-        address tokenAddress;
-        uint256 tokenId;
-        address depositor;
-        bool hasSecondarySaleFees;
-        bool feesPaid;
-        address[] feesAddress;
-        uint96[] feesValue;
-    }
-
-    struct PaymentSplit {
-        address payable recipient;
-        uint256 value;
-    }
-
-    struct AllowList {
-        address participant;
-        uint32 allocation;
-    }
-
-    struct ContractConfigByDAO {
-        address daoAddress;
-        address raffleTicketAddress;
-        address vrfAddress;
-        uint256 totalRaffles;
-        uint256 maxNumberOfSlotsPerRaffle;
-        uint256 maxBulkPurchaseCount;
-        uint256 nftSlotLimit;
-        uint256 royaltyFeeBps;
-        bool daoInitialized;
-    }
-
-    struct Storage {
-        bool unsafeVRFtesting;
-        address vrfAddress;
-        address raffleTicketAddress;
-
-        address payable daoAddress;
-        bool daoInitialized;
-
-        // DAO Configurable Settings
-        uint256 maxNumberOfSlotsPerRaffle;
-        uint256 maxBulkPurchaseCount;
-        uint256 royaltyFeeBps;
-        uint256 nftSlotLimit;
-        IRoyaltiesProvider royaltiesRegistry;
-        mapping(address => bool) supportedERC20Tokens;
-
-        // Raffle state and data storage
-        uint256 totalRaffles;
-        mapping(uint256 => RaffleConfig) raffleConfigs;
-        mapping(uint256 => Raffle) raffles;
-        mapping(uint256 => uint256) raffleRevenue;
-        mapping(uint256 => uint256) rafflesDAOPool;
-        mapping(uint256 => uint256) rafflesRoyaltyPool;
-        mapping(address => uint256) royaltiesReserve;
-    }
-
-    function raffleStorage() internal pure returns (Storage storage ds) {
+    function raffleStorage() internal pure returns (UniversalRaffleSchema.Storage storage ds) {
         bytes32 position = STORAGE_POSITION;
         assembly {
         ds.slot := position
         }
     }
 
-    event LogERC721Deposit(
-        address indexed depositor,
-        address tokenAddress,
-        uint256 tokenId,
-        uint256 indexed raffleId,
-        uint256 slotIndex,
-        uint256 nftSlotIndex
-    );
-
-    event LogERC721Withdrawal(
-        address indexed depositor,
-        address tokenAddress,
-        uint256 tokenId,
-        uint256 indexed raffleId,
-        uint256 slotIndex,
-        uint256 nftSlotIndex
-    );
-
-    event LogRaffleCreated(
-        uint256 indexed raffleId,
-        address indexed raffleOwner,
-        string raffleName
-    );
-
-    event LogRaffleEdited(
-        uint256 indexed raffleId,
-        address indexed raffleOwner,
-        string raffleName
-    );
-
-    event LogERC721RewardsClaim(address indexed claimer, uint256 indexed raffleId, uint256 slotIndex, uint256 amount);
-
-    modifier onlyRaffleSetupOwner(uint256 raffleId) {
-        Storage storage ds = raffleStorage();
-        require(raffleId > 0 &&
-                raffleId <= ds.totalRaffles &&
-                ds.raffleConfigs[raffleId].startTime > block.timestamp &&
-                !ds.raffles[raffleId].isCanceled &&
-                ds.raffleConfigs[raffleId].raffler == msg.sender, "E01");
-        _;
-    }
-
     modifier onlyRaffleSetup(uint256 raffleId) {
-        Storage storage ds = raffleStorage();
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
         require(raffleId > 0 &&
                 raffleId <= ds.totalRaffles &&
                 ds.raffleConfigs[raffleId].startTime > block.timestamp &&
@@ -197,19 +34,19 @@ library UniversalRaffleCore {
     }
 
     modifier onlyDAO() {
-        Storage storage ds = raffleStorage();
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
         require(msg.sender == ds.daoAddress, "E07");
         _;
     }
 
     function transferDAOownership(address payable _daoAddress) external onlyDAO {
-        Storage storage ds = UniversalRaffleCore.raffleStorage();
+        UniversalRaffleSchema.Storage storage ds = UniversalRaffleCore.raffleStorage();
         ds.daoAddress = _daoAddress;
         ds.daoInitialized = true;
     }
 
-    function configureRaffle(RaffleConfig calldata config, uint256 existingRaffleId) external returns (uint256) {
-        Storage storage ds = raffleStorage();
+    function configureRaffle(UniversalRaffleSchema.RaffleConfig calldata config, uint256 existingRaffleId) external returns (uint256) {
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
         uint256 currentTime = block.timestamp;
 
         require(
@@ -225,7 +62,7 @@ library UniversalRaffleCore {
         if (existingRaffleId > 0) {
             raffleId = existingRaffleId;
             require(ds.raffleConfigs[raffleId].raffler == msg.sender && ds.raffleConfigs[raffleId].startTime > currentTime, "No permission");
-            emit LogRaffleEdited(raffleId, msg.sender, config.raffleName);
+            emit UniversalRaffleSchema.LogRaffleEdited(raffleId, msg.sender, config.raffleName);
         } else {
             ds.totalRaffles = ds.totalRaffles + 1;
             raffleId = ds.totalRaffles;
@@ -233,7 +70,7 @@ library UniversalRaffleCore {
             ds.raffleConfigs[raffleId].raffler = msg.sender;
             ds.raffleConfigs[raffleId].totalSlots = config.totalSlots;
 
-            emit LogRaffleCreated(raffleId, msg.sender, config.raffleName);
+            emit UniversalRaffleSchema.LogRaffleCreated(raffleId, msg.sender, config.raffleName);
         }
 
         ds.raffleConfigs[raffleId].ERC20PurchaseToken = config.ERC20PurchaseToken;
@@ -261,10 +98,10 @@ library UniversalRaffleCore {
     function depositNFTsToRaffle(
         uint256 raffleId,
         uint256[] calldata slotIndices,
-        NFT[][] calldata tokens
+        UniversalRaffleSchema.NFT[][] calldata tokens
     ) external onlyRaffleSetup(raffleId) {
-        Storage storage ds = raffleStorage();
-        RaffleConfig storage raffle = ds.raffleConfigs[raffleId];
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
+        UniversalRaffleSchema.RaffleConfig storage raffle = ds.raffleConfigs[raffleId];
 
         require(
             slotIndices.length <= raffle.totalSlots &&
@@ -283,11 +120,11 @@ library UniversalRaffleCore {
     function depositERC721(
         uint256 raffleId,
         uint256 slotIndex,
-        NFT[] calldata tokens
+        UniversalRaffleSchema.NFT[] calldata tokens
     ) internal returns (uint256[] memory) {
-        Storage storage ds = raffleStorage();
-        Raffle storage raffle = ds.raffles[raffleId];
-        RaffleConfig storage raffleConfig = ds.raffleConfigs[raffleId];
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
+        UniversalRaffleSchema.Raffle storage raffle = ds.raffles[raffleId];
+        UniversalRaffleSchema.RaffleConfig storage raffleConfig = ds.raffleConfigs[raffleId];
 
         require(
             (msg.sender == raffleConfig.raffler || raffle.depositors[msg.sender]) &&
@@ -325,7 +162,7 @@ library UniversalRaffleCore {
         uint256 tokenId,
         address tokenAddress
     ) internal returns (uint256) {
-        Storage storage ds = raffleStorage();
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
 
         (LibPart.Part[] memory nftRoyalties,) = ds.royaltiesRegistry.getRoyalties(tokenAddress, tokenId);
 
@@ -339,7 +176,7 @@ library UniversalRaffleCore {
 
         IERC721(tokenAddress).safeTransferFrom(msg.sender, address(this), tokenId);
 
-        ds.raffles[raffleId].slots[slotIndex].depositedNFTs[nftSlotIndex] = DepositedNFT({
+        ds.raffles[raffleId].slots[slotIndex].depositedNFTs[nftSlotIndex] = UniversalRaffleSchema.DepositedNFT({
             tokenId: tokenId,
             tokenAddress: tokenAddress,
             depositor: msg.sender,
@@ -349,7 +186,7 @@ library UniversalRaffleCore {
             feesValue: feesValue
         });
 
-        emit LogERC721Deposit(
+        emit UniversalRaffleSchema.LogERC721Deposit(
             msg.sender,
             tokenAddress,
             tokenId,
@@ -363,10 +200,10 @@ library UniversalRaffleCore {
 
     function withdrawDepositedERC721(
         uint256 raffleId,
-        SlotIndexAndNFTIndex[] calldata slotNftIndexes
+        UniversalRaffleSchema.SlotIndexAndNFTIndex[] calldata slotNftIndexes
     ) external {
-        Storage storage ds = raffleStorage();
-        Raffle storage raffle = ds.raffles[raffleId];
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
+        UniversalRaffleSchema.Raffle storage raffle = ds.raffles[raffleId];
 
         require(raffleId > 0 && raffleId <= ds.totalRaffles && ds.raffles[raffleId].isCanceled, "E01");
 
@@ -388,15 +225,15 @@ library UniversalRaffleCore {
         uint256 slotIndex,
         uint256 nftSlotIndex
     ) internal {
-        Storage storage ds = raffleStorage();
-        DepositedNFT memory nftForWithdrawal = ds.raffles[raffleId].slots[slotIndex].depositedNFTs[
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
+        UniversalRaffleSchema.DepositedNFT memory nftForWithdrawal = ds.raffles[raffleId].slots[slotIndex].depositedNFTs[
             nftSlotIndex
         ];
 
         require(msg.sender == nftForWithdrawal.depositor, "E41");
         delete ds.raffles[raffleId].slots[slotIndex].depositedNFTs[nftSlotIndex];
 
-        emit LogERC721Withdrawal(
+        emit UniversalRaffleSchema.LogERC721Withdrawal(
             msg.sender,
             nftForWithdrawal.tokenAddress,
             nftForWithdrawal.tokenId,
@@ -412,29 +249,15 @@ library UniversalRaffleCore {
         );
     }
 
-    function buyRaffleTicketsChecks(uint256 raffleId, uint256 amount) external {
-        Storage storage ds = raffleStorage();
-        RaffleConfig storage raffleInfo = ds.raffleConfigs[raffleId];
-        Raffle storage raffle = ds.raffles[raffleId];
-
-        require(
-            raffleId > 0 && raffleId <= ds.totalRaffles &&
-            !raffle.isCanceled &&
-            raffleInfo.startTime < block.timestamp && 
-            block.timestamp < raffleInfo.endTime &&
-            raffle.depositedNFTCounter > 0 &&
-            amount > 0 && amount <= ds.maxBulkPurchaseCount, "Unavailable");
-    }
-
     function claimERC721Rewards(
         uint256 raffleId,
         uint256 slotIndex,
         uint256 amount
     ) external {
-        Storage storage ds = raffleStorage();
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
 
-        Raffle storage raffle = ds.raffles[raffleId];
-        Slot storage winningSlot = raffle.slots[slotIndex];
+        UniversalRaffleSchema.Raffle storage raffle = ds.raffles[raffleId];
+        UniversalRaffleSchema.Slot storage winningSlot = raffle.slots[slotIndex];
 
         uint256 totalWithdrawn = winningSlot.withdrawnNFTCounter;
 
@@ -443,12 +266,12 @@ library UniversalRaffleCore {
                 amount <= 40 &&
                 amount <= winningSlot.depositedNFTCounter - totalWithdrawn, "E24");
 
-        emit LogERC721RewardsClaim(msg.sender, raffleId, slotIndex, amount);
+        emit UniversalRaffleSchema.LogERC721RewardsClaim(msg.sender, raffleId, slotIndex, amount);
 
         raffle.withdrawnNFTCounter += amount;
         raffle.slots[slotIndex].withdrawnNFTCounter = winningSlot.withdrawnNFTCounter += amount;
         for (uint256 i = totalWithdrawn; i < amount + totalWithdrawn;) {
-            DepositedNFT memory nftForWithdrawal = winningSlot.depositedNFTs[i + 1];
+            UniversalRaffleSchema.DepositedNFT memory nftForWithdrawal = winningSlot.depositedNFTs[i + 1];
 
             IERC721(nftForWithdrawal.tokenAddress).safeTransferFrom(
                 address(this),
@@ -461,7 +284,7 @@ library UniversalRaffleCore {
     }
 
     function setRaffleConfigValue(uint256 configType, uint256 _value) external onlyDAO returns (uint256) {
-        Storage storage ds = raffleStorage();
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
 
         if (configType == 0) ds.maxNumberOfSlotsPerRaffle = _value;
         else if (configType == 1) ds.maxBulkPurchaseCount = _value;
@@ -472,47 +295,52 @@ library UniversalRaffleCore {
     }
 
     function setRoyaltiesRegistry(IRoyaltiesProvider _royaltiesRegistry) external onlyDAO returns (IRoyaltiesProvider) {
-        Storage storage ds = raffleStorage();
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
         ds.royaltiesRegistry = _royaltiesRegistry;
         return ds.royaltiesRegistry;
     }
 
     function setSupportedERC20Tokens(address erc20token, bool value) external onlyDAO returns (address, bool) {
-        Storage storage ds = raffleStorage();
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
         ds.supportedERC20Tokens[erc20token] = value;
         return (erc20token, value);
     }
 
-    function getRaffleState(uint256 raffleId) external view returns (RaffleConfig memory, RaffleState memory)
+    function getRaffleState(uint256 raffleId) external view returns (UniversalRaffleSchema.RaffleConfig memory, UniversalRaffleSchema.RaffleState memory)
     {
-        Storage storage ds = raffleStorage();
-        return (ds.raffleConfigs[raffleId], RaffleState(
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
+        return (ds.raffleConfigs[raffleId], UniversalRaffleSchema.RaffleState(
             ds.raffles[raffleId].ticketCounter,
             ds.raffles[raffleId].depositedNFTCounter,
             ds.raffles[raffleId].withdrawnNFTCounter,
             ds.raffles[raffleId].useAllowList,
+            ds.raffles[raffleId].isSetup,
             ds.raffles[raffleId].isCanceled,
             ds.raffles[raffleId].isFinalized,
             ds.raffles[raffleId].revenuePaid
         ));
     }
 
-    function getRaffleFinalize(uint256 raffleId) external view returns (bool, uint256, uint256)
-    {
-        Storage storage ds = raffleStorage();
+    function getRaffleFinalize(uint256 raffleId) external view returns (bool, uint256, uint256) {
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
         return (ds.raffles[raffleId].isFinalized, ds.raffleConfigs[raffleId].totalSlots, ds.raffles[raffleId].ticketCounter);
     }
 
+    function getDepositorList(uint256 raffleId, address participant) external view returns (bool) {
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
+        return ds.raffles[raffleId].depositors[participant];
+    }
+
     function getAllowList(uint256 raffleId, address participant) external view returns (uint256) {
-        Storage storage ds = raffleStorage();
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
         return ds.raffles[raffleId].allowList[participant];
     }
 
-    function getDepositedNftsInSlot(uint256 raffleId, uint256 slotIndex) external view returns (DepositedNFT[] memory) {
-        Storage storage ds = raffleStorage();
+    function getDepositedNftsInSlot(uint256 raffleId, uint256 slotIndex) external view returns (UniversalRaffleSchema.DepositedNFT[] memory) {
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
         uint256 nftsInSlot = ds.raffles[raffleId].slots[slotIndex].depositedNFTCounter;
 
-        DepositedNFT[] memory nfts = new DepositedNFT[](nftsInSlot);
+        UniversalRaffleSchema.DepositedNFT[] memory nfts = new UniversalRaffleSchema.DepositedNFT[](nftsInSlot);
 
         for (uint256 i; i < nftsInSlot;) {
             nfts[i] = ds.raffles[raffleId].slots[slotIndex].depositedNFTs[i + 1];
@@ -521,10 +349,10 @@ library UniversalRaffleCore {
         return nfts;
     }
 
-    function getSlotInfo(uint256 raffleId, uint256 slotIndex) external view returns (SlotInfo memory) {
-        Storage storage ds = raffleStorage();
-        Slot storage slot = ds.raffles[raffleId].slots[slotIndex];
-        SlotInfo memory slotInfo = SlotInfo(
+    function getSlotInfo(uint256 raffleId, uint256 slotIndex) external view returns (UniversalRaffleSchema.SlotInfo memory) {
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
+        UniversalRaffleSchema.Slot storage slot = ds.raffles[raffleId].slots[slotIndex];
+        UniversalRaffleSchema.SlotInfo memory slotInfo = UniversalRaffleSchema.SlotInfo(
             slot.depositedNFTCounter,
             slot.withdrawnNFTCounter,
             slot.winnerId,
@@ -533,10 +361,10 @@ library UniversalRaffleCore {
         return slotInfo;
     }
 
-    function getContractConfig() external view returns (ContractConfigByDAO memory) {
-        Storage storage ds = raffleStorage();
+    function getContractConfig() external view returns (UniversalRaffleSchema.ContractConfigByDAO memory) {
+        UniversalRaffleSchema.Storage storage ds = raffleStorage();
 
-        return ContractConfigByDAO(
+        return UniversalRaffleSchema.ContractConfigByDAO(
             ds.daoAddress,
             ds.raffleTicketAddress,
             ds.vrfAddress,

@@ -18,11 +18,6 @@ import "./lib/LibPart.sol";
 import "./UniversalRaffleCore.sol";
 import "./UniversalRaffleCoreTwo.sol";
 
-/* TODO:
- * Ensure no empty slots upon raffle
- * Return allowed depositors
- */
-
 contract UniversalRaffle is 
     IUniversalRaffle,
     ERC721Holder,
@@ -42,7 +37,7 @@ contract UniversalRaffle is
         address[] memory _supportedERC20Tokens,
         IRoyaltiesProvider _royaltiesRegistry
     ) {
-        UniversalRaffleCore.Storage storage ds = UniversalRaffleCore.raffleStorage();
+        UniversalRaffleSchema.Storage storage ds = UniversalRaffleCore.raffleStorage();
 
         ds.unsafeVRFtesting = _unsafeVRFtesting;
         ds.maxNumberOfSlotsPerRaffle = _maxNumberOfSlotsPerRaffle;
@@ -66,11 +61,11 @@ contract UniversalRaffle is
     }
 
     function getRaffleData(uint256 raffleId) private returns (
-        UniversalRaffleCore.Storage storage,
-        UniversalRaffleCore.RaffleConfig storage,
-        UniversalRaffleCore.Raffle storage
+        UniversalRaffleSchema.Storage storage,
+        UniversalRaffleSchema.RaffleConfig storage,
+        UniversalRaffleSchema.Raffle storage
     ) {
-        UniversalRaffleCore.Storage storage ds = UniversalRaffleCore.raffleStorage();
+        UniversalRaffleSchema.Storage storage ds = UniversalRaffleCore.raffleStorage();
         return (
             ds,
             ds.raffleConfigs[raffleId],
@@ -78,19 +73,19 @@ contract UniversalRaffle is
         );
     }
 
-    function createRaffle(UniversalRaffleCore.RaffleConfig calldata config) external override returns (uint256) {
+    function createRaffle(UniversalRaffleSchema.RaffleConfig calldata config) external override returns (uint256) {
         return UniversalRaffleCore.configureRaffle(config, 0);
     }
 
-    function reconfigureRaffle(UniversalRaffleCore.RaffleConfig calldata config, uint256 existingRaffleId) external override returns (uint256) {
+    function reconfigureRaffle(UniversalRaffleSchema.RaffleConfig calldata config, uint256 existingRaffleId) external override returns (uint256) {
         return UniversalRaffleCore.configureRaffle(config, existingRaffleId);
     }
 
-    function setDepositors(uint256 raffleId, UniversalRaffleCoreTwo.AllowList[] calldata allowList) external override {
+    function setDepositors(uint256 raffleId, UniversalRaffleSchema.AllowList[] calldata allowList) external override {
         return UniversalRaffleCoreTwo.setDepositors(raffleId, allowList);
     }
 
-    function setAllowList(uint256 raffleId, UniversalRaffleCoreTwo.AllowList[] calldata allowList) external override {
+    function setAllowList(uint256 raffleId, UniversalRaffleSchema.AllowList[] calldata allowList) external override {
         return UniversalRaffleCoreTwo.setAllowList(raffleId, allowList);
     }
 
@@ -98,11 +93,11 @@ contract UniversalRaffle is
         return UniversalRaffleCoreTwo.toggleAllowList(raffleId);
     }
 
-    function depositNFTsToRaffle(uint256 raffleId, uint256[] calldata slotIndices, UniversalRaffleCore.NFT[][] calldata tokens) external override {
+    function depositNFTsToRaffle(uint256 raffleId, uint256[] calldata slotIndices, UniversalRaffleSchema.NFT[][] calldata tokens) external override {
         UniversalRaffleCore.depositNFTsToRaffle(raffleId, slotIndices, tokens);
     }
 
-    function withdrawDepositedERC721(uint256 raffleId, UniversalRaffleCore.SlotIndexAndNFTIndex[] calldata slotNftIndexes) external override nonReentrant {
+    function withdrawDepositedERC721(uint256 raffleId, UniversalRaffleSchema.SlotIndexAndNFTIndex[] calldata slotNftIndexes) external override nonReentrant {
         UniversalRaffleCore.withdrawDepositedERC721(raffleId, slotNftIndexes);
     }
 
@@ -111,12 +106,12 @@ contract UniversalRaffle is
         uint256 amount
     ) external payable override nonReentrant {
         (
-            UniversalRaffleCore.Storage storage ds,
-            UniversalRaffleCore.RaffleConfig storage raffleInfo,
-            UniversalRaffleCore.Raffle storage raffle
+            UniversalRaffleSchema.Storage storage ds,
+            UniversalRaffleSchema.RaffleConfig storage raffleInfo,
+            UniversalRaffleSchema.Raffle storage raffle
         ) = getRaffleData(raffleId);
 
-        UniversalRaffleCore.buyRaffleTicketsChecks(raffleId, amount);
+        UniversalRaffleCoreTwo.buyRaffleTicketsChecks(raffleId, amount);
 
         if (raffle.useAllowList) {
             require(raffle.allowList[msg.sender] >= amount);
@@ -140,9 +135,9 @@ contract UniversalRaffle is
 
     function finalizeRaffle(uint256 raffleId, bytes32 keyHash, uint64 subscriptionId, uint16 minConf, uint32 callbackGas) external override nonReentrant {
         (
-            UniversalRaffleCore.Storage storage ds,
-            UniversalRaffleCore.RaffleConfig storage raffleInfo,
-            UniversalRaffleCore.Raffle storage raffle
+            UniversalRaffleSchema.Storage storage ds,
+            UniversalRaffleSchema.RaffleConfig storage raffleInfo,
+            UniversalRaffleSchema.Raffle storage raffle
         ) = getRaffleData(raffleId);
 
         require(raffleId > 0 && raffleId <= ds.totalRaffles &&
@@ -157,11 +152,11 @@ contract UniversalRaffle is
             UniversalRaffleCoreTwo.calculatePaymentSplits(raffleId);
         }
 
-        emit UniversalRaffleCoreTwo.LogRaffleFinalized(raffleId);
+        emit UniversalRaffleSchema.LogRaffleFinalized(raffleId);
     }
 
     function setWinners(uint256 raffleId, uint256[] memory winnerIds) external {
-        UniversalRaffleCore.Storage storage ds = UniversalRaffleCore.raffleStorage();
+        UniversalRaffleSchema.Storage storage ds = UniversalRaffleCore.raffleStorage();
         require(msg.sender == ds.vrfAddress, "No permission");
         for (uint256 i = 1; i <= winnerIds.length;) {
             ds.raffles[raffleId].slots[i].winnerId = winnerIds[i - 1];
@@ -208,7 +203,7 @@ contract UniversalRaffle is
         return UniversalRaffleCore.setSupportedERC20Tokens(erc20token, value);
     }
 
-    function getRaffleState(uint256 raffleId) external view override returns (UniversalRaffleCore.RaffleConfig memory, UniversalRaffleCore.RaffleState memory) {
+    function getRaffleState(uint256 raffleId) external view override returns (UniversalRaffleSchema.RaffleConfig memory, UniversalRaffleSchema.RaffleState memory) {
         return UniversalRaffleCore.getRaffleState(raffleId);
     }
 
@@ -216,20 +211,24 @@ contract UniversalRaffle is
         return UniversalRaffleCore.getRaffleFinalize(raffleId);
     }
 
+    function getDepositorList(uint256 raffleId, address participant) external view override returns (bool) {
+        return UniversalRaffleCore.getDepositorList(raffleId, participant);
+    }
+
     function getAllowList(uint256 raffleId, address participant) external view override returns (uint256) {
         return UniversalRaffleCore.getAllowList(raffleId, participant);
     }
 
     function getDepositedNftsInSlot(uint256 raffleId, uint256 slotIndex) external view override 
-        returns (UniversalRaffleCore.DepositedNFT[] memory) {
+        returns (UniversalRaffleSchema.DepositedNFT[] memory) {
         return UniversalRaffleCore.getDepositedNftsInSlot(raffleId, slotIndex);
     }
 
-    function getSlotInfo(uint256 raffleId, uint256 slotIndex) external view override returns (UniversalRaffleCore.SlotInfo memory) {
+    function getSlotInfo(uint256 raffleId, uint256 slotIndex) external view override returns (UniversalRaffleSchema.SlotInfo memory) {
         return UniversalRaffleCore.getSlotInfo(raffleId, slotIndex);
     }
 
-    function getContractConfig() external view override returns (UniversalRaffleCore.ContractConfigByDAO memory) {
+    function getContractConfig() external view override returns (UniversalRaffleSchema.ContractConfigByDAO memory) {
         return UniversalRaffleCore.getContractConfig();
     }
 }
