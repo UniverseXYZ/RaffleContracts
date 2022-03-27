@@ -18,11 +18,6 @@ import "./lib/LibPart.sol";
 import "./UniversalRaffleCore.sol";
 import "./UniversalRaffleCoreTwo.sol";
 
-/* TODO:
- * Remove raffle ticket image
- * Custom raffle ticket colors
- */
-
 contract UniversalRaffle is 
     IUniversalRaffle,
     ERC721Holder,

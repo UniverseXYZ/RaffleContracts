@@ -18,7 +18,8 @@ library UniversalRaffleSchema {
         uint256 ticketPrice;
         uint32 totalSlots;
         string raffleName;
-        string raffleImageURL;
+        string ticketColorOne;
+        string ticketColorTwo;
         PaymentSplit[] paymentSplits;
     }
 

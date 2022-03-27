@@ -80,7 +80,8 @@ library UniversalRaffleCore {
         ds.raffleConfigs[raffleId].minTicketCount = config.minTicketCount;
         ds.raffleConfigs[raffleId].ticketPrice = config.ticketPrice;
         ds.raffleConfigs[raffleId].raffleName = config.raffleName;
-        ds.raffleConfigs[raffleId].raffleImageURL = config.raffleImageURL;
+        ds.raffleConfigs[raffleId].ticketColorOne = config.ticketColorOne;
+        ds.raffleConfigs[raffleId].ticketColorTwo = config.ticketColorTwo;
 
         uint256 checkSum = 0;
         delete ds.raffleConfigs[raffleId].paymentSplits;

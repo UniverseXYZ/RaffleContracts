@@ -39,7 +39,8 @@ describe("Raffle Royalty Tests", async function () {
   const totalSlots = 10;
   const emptySplits = []
   const raffleName = 'illestrater\'s Raffle';
-  const raffleImage = 'https://i.ibb.co/SdN2kw3/ill.png';
+  const ticketColorOne = 'BF953F';
+  const ticketColorTwo = 'FCF6BA';
   const paymentSplits = [[randomWallet3.address, 1000], [randomWallet4.address, 500]];
 
   const UNSAFE_VRF_TESTING = true;
@@ -129,7 +130,8 @@ describe("Raffle Royalty Tests", async function () {
       tokenPrice,
       totalSlots,
       raffleName,
-      raffleImage,
+      ticketColorOne,
+      ticketColorTwo,
       emptySplits,
     ]);
 
@@ -143,7 +145,8 @@ describe("Raffle Royalty Tests", async function () {
       tokenPrice,
       totalSlots,
       raffleName,
-      raffleImage,
+      ticketColorOne,
+      ticketColorTwo,
       emptySplits,
     ]);
 
@@ -157,7 +160,8 @@ describe("Raffle Royalty Tests", async function () {
       tokenPrice,
       totalSlots,
       raffleName,
-      raffleImage,
+      ticketColorOne,
+      ticketColorTwo,
       paymentSplits,
     ]);
 
