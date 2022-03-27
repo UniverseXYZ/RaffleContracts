@@ -89,7 +89,7 @@ contract RaffleTickets is IRaffleTickets, ERC721 {
     if (block.timestamp > raffle.endTime) {
       if (raffleState.isFinalized) claim = 'Void';
       else claim = 'Pending Results';
-      time = 'Ended';
+      time = 'Concluded';
     } else {
       claim = 'Awaiting Results';
       time = 'Pre-Raffle';
